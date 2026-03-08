@@ -67,41 +67,32 @@ async def get_profile_pic(contacto: str, output_path: Path) -> Path:
         await wa_page.mouse.click(header_coords['x'], header_coords['y'])
         await asyncio.sleep(2)
 
-        # Buscar la imagen de perfil en el panel lateral
-        img_src = await wa_page.evaluate("""
-            () => {
-                const imgs = Array.from(document.querySelectorAll('img'));
-                // Buscar imágenes grandes (foto de perfil en el panel de info)
-                for (const img of imgs) {
-                    const r = img.getBoundingClientRect();
-                    if (r.width > 100 && r.height > 100 && img.src && img.src.startsWith('blob:')) {
-                        return img.src;
+        # Obtener URL del avatar del header del chat (CDN de WhatsApp)
+        result = await wa_page.evaluate("""
+            async () => {
+                // Buscar el img del avatar en el header del chat (panel derecho x>400)
+                const headers = Array.from(document.querySelectorAll('header'));
+                let imgSrc = null;
+                for (const h of headers) {
+                    const r = h.getBoundingClientRect();
+                    if (r.x > 400 && r.width > 400) {
+                        const img = h.querySelector('img');
+                        if (img && img.src) { imgSrc = img.src; break; }
                     }
                 }
-                // Fallback: cualquier imagen grande
-                for (const img of imgs) {
-                    const r = img.getBoundingClientRect();
-                    if (r.width > 80 && r.height > 80 && img.src) {
-                        return img.src;
-                    }
-                }
-                return null;
+                if (!imgSrc) return null;
+                const resp = await fetch(imgSrc);
+                const buf = await resp.arrayBuffer();
+                return {bytes: Array.from(new Uint8Array(buf)), src: imgSrc};
             }
         """)
-        if not img_src:
+        if not result or len(result['bytes']) < 1000:
             raise RuntimeError("No se encontró la foto de perfil")
 
+        img_src = result['src']
+        img_bytes = result['bytes']
         print(f"Foto de perfil encontrada: {img_src[:80]}...")
-
-        # Descargar la imagen via JavaScript (fetch del blob)
-        img_bytes = await wa_page.evaluate(f"""
-            async () => {{
-                const resp = await fetch('{img_src}');
-                const buf = await resp.arrayBuffer();
-                return Array.from(new Uint8Array(buf));
-            }}
-        """)
-        output_path.write_bytes(bytes(img_bytes))
+        output_path.write_bytes(bytes(img_bytes if isinstance(img_bytes, (bytes, bytearray)) else bytes(img_bytes)))
         print(f"Foto guardada en {output_path} ({len(img_bytes):,} bytes)")
 
         # Cerrar el panel de perfil con Escape
