@@ -1,0 +1,27 @@
+# Ignorar todos los subdirectorios con sus propios repos
+ml-arbitraje/
+Analisis_ML/
+pabloflerman-portfolio/
+palishopping/
+ropavacio/
+pablocrm/
+gestor-productos/
+ml-scripts/
+palishopping-agent/
+grid-trading-bot/
+gemini-test/
+gdrive-mcp/
+
+# Archivos de debug temporales
+debug_wa*.py
+gato_bici_whatsapp.py
+
+# Imágenes descargadas/generadas
+*.jpg
+*.png
+*.jpeg
+
+# Misc
+__pycache__/
+*.pyc
+.env
