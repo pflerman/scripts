@@ -24,9 +24,9 @@ logger = logging.getLogger(__name__)
 
 def main() -> None:
     logger.info("Iniciando Palishopping KB Manager")
+    root = AppWindow()
     setup_theme()
-    window = AppWindow()
-    window.mainloop()
+    root.mainloop()
 
 
 if __name__ == "__main__":

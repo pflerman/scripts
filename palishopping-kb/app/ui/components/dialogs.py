@@ -1,65 +1,48 @@
-"""Diálogos modales reutilizables."""
+"""Diálogos modales reutilizables — Tkinter puro."""
 
-import customtkinter as ctk
+import tkinter as tk
+from tkinter import ttk
 
 from app.ui import theme
 
 
-class InputDialog(ctk.CTkToplevel):
+class InputDialog(tk.Toplevel):
     """Diálogo modal para pedir un valor al usuario."""
 
-    def __init__(
-        self,
-        master: ctk.CTkBaseClass,
-        title: str = "Entrada",
-        prompt: str = "Ingresá un valor:",
-        default: str = "",
-    ):
+    def __init__(self, master: tk.Widget, title: str = "Entrada",
+                 prompt: str = "Ingresá un valor:", default: str = ""):
         super().__init__(master)
         self.title(title)
-        self.geometry("400x180")
+        self.geometry("400x160")
         self.resizable(False, False)
-        self.configure(fg_color=theme.BG_PRIMARY)
+        self.configure(bg=theme.BG_PRIMARY)
+        self.transient(master.winfo_toplevel())
+        self.grab_set()
 
         self.result: str | None = None
 
-        self.grab_set()
-        self.transient(master.winfo_toplevel())
+        tk.Label(self, text=prompt, font=theme.FONT_NORMAL,
+                 bg=theme.BG_PRIMARY, fg=theme.TEXT_PRIMARY).pack(
+            padx=20, pady=(18, 8))
 
-        label = ctk.CTkLabel(
-            self,
-            text=prompt,
-            font=theme.font(theme.FONT_SIZE_MD),
-            text_color=theme.TEXT_PRIMARY,
-        )
-        label.pack(padx=20, pady=(20, 10))
+        self._var = tk.StringVar(value=default)
+        entry = ttk.Entry(self, textvariable=self._var, width=45)
+        entry.pack(padx=20, pady=4)
+        entry.focus_set()
+        entry.bind("<Return>", lambda e: self._ok())
 
-        self._entry = ctk.CTkEntry(
-            self,
-            font=theme.font(theme.FONT_SIZE_MD),
-            fg_color=theme.BG_INPUT,
-            text_color=theme.TEXT_PRIMARY,
-            border_color=theme.BORDER,
-            width=360,
-        )
-        self._entry.pack(padx=20, pady=5)
-        self._entry.insert(0, default)
-        self._entry.focus_set()
-        self._entry.bind("<Return>", lambda e: self._ok())
+        btn_frame = tk.Frame(self, bg=theme.BG_PRIMARY)
+        btn_frame.pack(pady=12)
 
-        btn_frame = ctk.CTkFrame(self, fg_color="transparent")
-        btn_frame.pack(pady=15)
-
-        ok_btn = ctk.CTkButton(btn_frame, text="Aceptar", width=100, command=self._ok)
-        theme.style_accent_button(ok_btn)
-        ok_btn.pack(side="left", padx=5)
-
-        cancel_btn = ctk.CTkButton(btn_frame, text="Cancelar", width=100, command=self._cancel)
-        theme.style_secondary_button(cancel_btn)
-        cancel_btn.pack(side="left", padx=5)
+        tk.Button(btn_frame, text="Aceptar", font=theme.FONT_BOLD,
+                  bg=theme.BTN_SUCCESS, fg="white", relief="flat", bd=0,
+                  padx=16, pady=3, command=self._ok).pack(side="left", padx=4)
+        tk.Button(btn_frame, text="Cancelar", font=theme.FONT_NORMAL,
+                  bg=theme.BG_SECONDARY, fg=theme.TEXT_PRIMARY, relief="solid", bd=1,
+                  padx=16, pady=3, command=self._cancel).pack(side="left", padx=4)
 
     def _ok(self) -> None:
-        self.result = self._entry.get()
+        self.result = self._var.get()
         self.destroy()
 
     def _cancel(self) -> None:
@@ -67,45 +50,34 @@ class InputDialog(ctk.CTkToplevel):
         self.destroy()
 
 
-class ConfirmDialog(ctk.CTkToplevel):
+class ConfirmDialog(tk.Toplevel):
     """Diálogo de confirmación Sí/No."""
 
-    def __init__(
-        self,
-        master: ctk.CTkBaseClass,
-        title: str = "Confirmar",
-        message: str = "¿Estás seguro?",
-    ):
+    def __init__(self, master: tk.Widget, title: str = "Confirmar",
+                 message: str = "¿Estás seguro?"):
         super().__init__(master)
         self.title(title)
-        self.geometry("400x150")
+        self.geometry("400x140")
         self.resizable(False, False)
-        self.configure(fg_color=theme.BG_PRIMARY)
+        self.configure(bg=theme.BG_PRIMARY)
+        self.transient(master.winfo_toplevel())
+        self.grab_set()
 
         self.result: bool = False
 
-        self.grab_set()
-        self.transient(master.winfo_toplevel())
+        tk.Label(self, text=message, font=theme.FONT_NORMAL,
+                 bg=theme.BG_PRIMARY, fg=theme.TEXT_PRIMARY,
+                 wraplength=360).pack(padx=20, pady=(20, 12))
 
-        label = ctk.CTkLabel(
-            self,
-            text=message,
-            font=theme.font(theme.FONT_SIZE_MD),
-            text_color=theme.TEXT_PRIMARY,
-            wraplength=360,
-        )
-        label.pack(padx=20, pady=(25, 15))
+        btn_frame = tk.Frame(self, bg=theme.BG_PRIMARY)
+        btn_frame.pack(pady=8)
 
-        btn_frame = ctk.CTkFrame(self, fg_color="transparent")
-        btn_frame.pack(pady=10)
-
-        yes_btn = ctk.CTkButton(btn_frame, text="Sí", width=100, command=self._yes)
-        theme.style_accent_button(yes_btn)
-        yes_btn.pack(side="left", padx=5)
-
-        no_btn = ctk.CTkButton(btn_frame, text="No", width=100, command=self._no)
-        theme.style_secondary_button(no_btn)
-        no_btn.pack(side="left", padx=5)
+        tk.Button(btn_frame, text="Sí", font=theme.FONT_BOLD,
+                  bg=theme.BTN_SUCCESS, fg="white", relief="flat", bd=0,
+                  padx=20, pady=3, command=self._yes).pack(side="left", padx=4)
+        tk.Button(btn_frame, text="No", font=theme.FONT_NORMAL,
+                  bg=theme.BG_SECONDARY, fg=theme.TEXT_PRIMARY, relief="solid", bd=1,
+                  padx=20, pady=3, command=self._no).pack(side="left", padx=4)
 
     def _yes(self) -> None:
         self.result = True

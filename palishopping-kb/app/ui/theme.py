@@ -1,126 +1,197 @@
-"""Tema visual de la aplicación — paleta oscura con acentos MercadoLibre."""
+"""Tema visual — Tkinter puro + ttk, estilo Analisis_ML."""
 
-import customtkinter as ctk
+import tkinter as tk
+from tkinter import ttk
 
-# ── Paleta de colores ─────────────────────────────────────────────────────────
+# ── Paleta de colores (estilo Analisis_ML — fondo claro, Material Design) ────
 
-# Fondo principal y secundario
-BG_PRIMARY = "#1a1a2e"
-BG_SECONDARY = "#16213e"
-BG_CARD = "#1f2b47"
-BG_SIDEBAR = "#0f1627"
-BG_INPUT = "#253350"
-BG_HOVER = "#2a3f5f"
-
-# Acentos (naranja/amber tipo MercadoLibre)
-ACCENT = "#ff9500"
-ACCENT_HOVER = "#ffaa33"
-ACCENT_DARK = "#cc7700"
+BG_PRIMARY = "#f0f4f8"
+BG_SECONDARY = "#f5f5f5"
+BG_CARD = "#ffffff"
+BG_SIDEBAR = "#2c3e50"
+BG_INPUT = "#ffffff"
+BG_HOVER = "#e8edf2"
 
 # Texto
-TEXT_PRIMARY = "#e8e8e8"
-TEXT_SECONDARY = "#a0a8b8"
-TEXT_MUTED = "#6b7280"
-TEXT_ON_ACCENT = "#1a1a2e"
+TEXT_PRIMARY = "#2c3e50"
+TEXT_SECONDARY = "#7f8c8d"
+TEXT_MUTED = "#95a5a6"
+TEXT_ON_SIDEBAR = "#ecf0f1"
+TEXT_ON_SIDEBAR_ACTIVE = "#ffffff"
+TEXT_ON_SIDEBAR_MUTED = "#95a5a6"
+
+# Acentos
+ACCENT = "#ff9500"
+ACCENT_HOVER = "#e08600"
+
+# Botones Material Design
+BTN_SUCCESS = "#4CAF50"
+BTN_INFO = "#2196F3"
+BTN_WARNING = "#FF9800"
+BTN_DANGER = "#f44336"
 
 # Estados
-SUCCESS = "#22c55e"
-WARNING = "#f59e0b"
-ERROR = "#ef4444"
-INFO = "#3b82f6"
+SUCCESS = "#27ae60"
+WARNING = "#f39c12"
+ERROR = "#e74c3c"
+INFO = "#2980b9"
 
 # Bordes
-BORDER = "#2a3f5f"
-BORDER_LIGHT = "#374f73"
+BORDER = "#dcdde1"
+BORDER_DARK = "#bdc3c7"
 
-# ── Fuentes ───────────────────────────────────────────────────────────────────
+# Tags de Treeview
+TAG_EVEN = "#ffffff"
+TAG_ODD = "#f8f9fa"
+TAG_SELECTED = "#d4edda"
+COUNT_LABEL_COLOR = "#0066cc"
 
-FONT_FAMILY = "Segoe UI"  # Fallback to system default on Linux
-FONT_SIZE_XS = 11
-FONT_SIZE_SM = 12
-FONT_SIZE_MD = 13
-FONT_SIZE_LG = 15
-FONT_SIZE_XL = 18
-FONT_SIZE_XXL = 24
-FONT_SIZE_TITLE = 20
+# ── Fuentes (Arial, como Analisis_ML) ────────────────────────────────────────
 
-# ── Dimensiones ───────────────────────────────────────────────────────────────
+FONT_FAMILY = "Arial"
+FONT_NORMAL = (FONT_FAMILY, 10)
+FONT_BOLD = (FONT_FAMILY, 10, "bold")
+FONT_SMALL = (FONT_FAMILY, 9)
+FONT_SMALL_BOLD = (FONT_FAMILY, 9, "bold")
+FONT_TITLE = (FONT_FAMILY, 14, "bold")
+FONT_SUBTITLE = (FONT_FAMILY, 12, "bold")
+FONT_LARGE = (FONT_FAMILY, 18, "bold")
+FONT_COUNTER = (FONT_FAMILY, 28, "bold")
 
-SIDEBAR_WIDTH = 200
-STATUSBAR_HEIGHT = 30
+# ── Dimensiones ──────────────────────────────────────────────────────────────
+
+SIDEBAR_WIDTH = 180
+STATUSBAR_HEIGHT = 28
 PADDING_SM = 4
 PADDING_MD = 8
 PADDING_LG = 16
-PADDING_XL = 24
-BORDER_RADIUS = 8
 
 
 def setup_theme() -> None:
-    """Configura CustomTkinter con el tema de la app."""
-    ctk.set_appearance_mode("dark")
-    ctk.set_default_color_theme("dark-blue")
+    """Configura el estilo ttk global."""
+    style = ttk.Style()
+    style.theme_use("clam")
 
+    # Treeview
+    style.configure("Treeview",
+                     background=BG_CARD,
+                     foreground=TEXT_PRIMARY,
+                     fieldbackground=BG_CARD,
+                     font=FONT_NORMAL,
+                     rowheight=26)
+    style.configure("Treeview.Heading",
+                     background=BG_SECONDARY,
+                     foreground=TEXT_PRIMARY,
+                     font=FONT_BOLD,
+                     relief="flat")
+    style.map("Treeview.Heading",
+              background=[("active", BORDER)])
+    style.map("Treeview",
+              background=[("selected", "#cde4f7")],
+              foreground=[("selected", TEXT_PRIMARY)])
 
-def font(size: int = FONT_SIZE_MD, weight: str = "normal") -> tuple:
-    """Retorna tupla de fuente para CTk."""
-    return (FONT_FAMILY, size, weight)
+    # Buttons
+    style.configure("TButton",
+                     font=FONT_NORMAL,
+                     padding=(12, 4))
 
+    # Accent button
+    style.configure("Accent.TButton",
+                     font=FONT_BOLD,
+                     padding=(14, 5))
 
-def font_bold(size: int = FONT_SIZE_MD) -> tuple:
-    return font(size, "bold")
+    # Entry
+    style.configure("TEntry",
+                     font=FONT_NORMAL,
+                     padding=4)
 
+    # Labels
+    style.configure("TLabel",
+                     font=FONT_NORMAL,
+                     background=BG_PRIMARY,
+                     foreground=TEXT_PRIMARY)
 
-def style_card_frame(frame: ctk.CTkFrame) -> None:
-    """Aplica estilo de card a un frame."""
-    frame.configure(
-        fg_color=BG_CARD,
-        corner_radius=BORDER_RADIUS,
-        border_width=1,
-        border_color=BORDER,
-    )
+    style.configure("Title.TLabel",
+                     font=FONT_TITLE,
+                     background=BG_PRIMARY,
+                     foreground=TEXT_PRIMARY)
 
+    style.configure("Subtitle.TLabel",
+                     font=FONT_SUBTITLE,
+                     background=BG_PRIMARY,
+                     foreground=TEXT_PRIMARY)
 
-def style_accent_button(button: ctk.CTkButton) -> None:
-    """Aplica estilo de botón principal con acento."""
-    button.configure(
-        fg_color=ACCENT,
-        hover_color=ACCENT_HOVER,
-        text_color=TEXT_ON_ACCENT,
-        font=font_bold(FONT_SIZE_MD),
-        corner_radius=6,
-    )
+    style.configure("Muted.TLabel",
+                     font=FONT_SMALL,
+                     background=BG_PRIMARY,
+                     foreground=TEXT_MUTED)
 
+    style.configure("Count.TLabel",
+                     font=FONT_NORMAL,
+                     background=BG_SECONDARY,
+                     foreground=COUNT_LABEL_COLOR)
 
-def style_secondary_button(button: ctk.CTkButton) -> None:
-    """Aplica estilo de botón secundario."""
-    button.configure(
-        fg_color=BG_INPUT,
-        hover_color=BG_HOVER,
-        text_color=TEXT_PRIMARY,
-        font=font(FONT_SIZE_MD),
-        corner_radius=6,
-        border_width=1,
-        border_color=BORDER,
-    )
+    style.configure("Card.TLabel",
+                     font=FONT_NORMAL,
+                     background=BG_CARD,
+                     foreground=TEXT_PRIMARY)
 
+    style.configure("CardTitle.TLabel",
+                     font=FONT_BOLD,
+                     background=BG_CARD,
+                     foreground=TEXT_PRIMARY)
 
-def style_sidebar_button(button: ctk.CTkButton, active: bool = False) -> None:
-    """Aplica estilo a un botón de la sidebar."""
-    if active:
-        button.configure(
-            fg_color=ACCENT,
-            hover_color=ACCENT_HOVER,
-            text_color=TEXT_ON_ACCENT,
-            font=font_bold(FONT_SIZE_MD),
-            anchor="w",
-            corner_radius=6,
-        )
-    else:
-        button.configure(
-            fg_color="transparent",
-            hover_color=BG_HOVER,
-            text_color=TEXT_SECONDARY,
-            font=font(FONT_SIZE_MD),
-            anchor="w",
-            corner_radius=6,
-        )
+    style.configure("CardAccent.TLabel",
+                     font=FONT_BOLD,
+                     background=BG_CARD,
+                     foreground=ACCENT)
+
+    style.configure("CardSuccess.TLabel",
+                     font=FONT_NORMAL,
+                     background=BG_CARD,
+                     foreground=SUCCESS)
+
+    style.configure("CardMuted.TLabel",
+                     font=FONT_SMALL,
+                     background=BG_CARD,
+                     foreground=TEXT_MUTED)
+
+    # Counter labels (dashboard)
+    style.configure("Counter.TLabel",
+                     font=FONT_COUNTER,
+                     background=BG_CARD,
+                     foreground=ACCENT)
+
+    style.configure("CounterBlue.TLabel",
+                     font=FONT_COUNTER,
+                     background=BG_CARD,
+                     foreground=INFO)
+
+    style.configure("CounterGreen.TLabel",
+                     font=FONT_COUNTER,
+                     background=BG_CARD,
+                     foreground=SUCCESS)
+
+    # Warning frame
+    style.configure("Warning.TLabel",
+                     font=FONT_BOLD,
+                     background="#fff3cd",
+                     foreground="#856404")
+
+    style.configure("WarningDetail.TLabel",
+                     font=FONT_SMALL,
+                     background="#fff3cd",
+                     foreground="#856404")
+
+    # Frames
+    style.configure("Card.TFrame",
+                     background=BG_CARD,
+                     relief="solid",
+                     borderwidth=1)
+
+    style.configure("TFrame",
+                     background=BG_PRIMARY)
+
+    # Separator
+    style.configure("TSeparator",
+                     background=BORDER)

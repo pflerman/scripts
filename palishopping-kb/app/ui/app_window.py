@@ -1,8 +1,8 @@
-"""Ventana principal con sidebar de navegación y área de contenido."""
+"""Ventana principal con sidebar de navegación y área de contenido — Tkinter puro."""
 
 import logging
-
-import customtkinter as ctk
+import tkinter as tk
+from tkinter import ttk
 
 from app.models.bundle import BundleManager
 from app.models.catalogo import Catalogo
@@ -17,18 +17,17 @@ from app.ui.views.productos_view import ProductosView
 
 logger = logging.getLogger(__name__)
 
-# Navegación: (key, label, icon)
 NAV_ITEMS = [
-    ("dashboard",  "Dashboard",  "\u2302"),   # ⌂
-    ("productos",  "Productos",  "\u2630"),   # ☰
-    ("fotos",      "Fotos",      "\u25a3"),   # ▣
-    ("ia",         "IA",         "\u2726"),   # ✦
-    ("bundles",    "Bundles",    "\u229e"),   # ⊞
-    ("listings",   "Listings",   "\u2197"),   # ↗
+    ("dashboard", "Dashboard"),
+    ("productos", "Productos"),
+    ("fotos", "Fotos"),
+    ("ia", "IA"),
+    ("bundles", "Bundles"),
+    ("listings", "Listings"),
 ]
 
 
-class AppWindow(ctk.CTk):
+class AppWindow(tk.Tk):
     """Ventana principal de Palishopping KB Manager."""
 
     def __init__(self) -> None:
@@ -37,7 +36,7 @@ class AppWindow(ctk.CTk):
         self.title("Palishopping KB Manager")
         self.geometry("1200x800")
         self.minsize(900, 600)
-        self.configure(fg_color=theme.BG_PRIMARY)
+        self.configure(bg=theme.BG_PRIMARY)
 
         # Modelos de datos
         self._catalogo = Catalogo()
@@ -46,113 +45,105 @@ class AppWindow(ctk.CTk):
 
         # Estado
         self._active_view: str = ""
-        self._nav_buttons: dict[str, ctk.CTkButton] = {}
-        self._current_view: ctk.CTkFrame | None = None
+        self._nav_buttons: dict[str, tk.Label] = {}
+        self._current_view: tk.Frame | None = None
 
         self._build()
         self.navigate("dashboard")
 
     def _build(self) -> None:
-        # Layout principal: sidebar | content | statusbar
-        self.columnconfigure(1, weight=1)
-        self.rowconfigure(0, weight=1)
-
         # ── Sidebar ──────────────────────────────────────────────────────────
-        sidebar = ctk.CTkFrame(
-            self,
-            width=theme.SIDEBAR_WIDTH,
-            fg_color=theme.BG_SIDEBAR,
-            corner_radius=0,
-        )
-        sidebar.grid(row=0, column=0, sticky="nsw", rowspan=2)
-        sidebar.grid_propagate(False)
+        sidebar = tk.Frame(self, bg=theme.BG_SIDEBAR, width=theme.SIDEBAR_WIDTH)
+        sidebar.pack(side="left", fill="y")
+        sidebar.pack_propagate(False)
 
-        # Logo / título
-        logo_frame = ctk.CTkFrame(sidebar, fg_color="transparent")
-        logo_frame.pack(fill="x", padx=12, pady=(20, 25))
+        # Logo
+        tk.Label(
+            sidebar, text="Palishopping",
+            font=theme.FONT_TITLE, bg=theme.BG_SIDEBAR,
+            fg=theme.TEXT_ON_SIDEBAR_ACTIVE, anchor="w",
+        ).pack(fill="x", padx=14, pady=(18, 0))
 
-        logo_label = ctk.CTkLabel(
-            logo_frame,
-            text="Palishopping",
-            font=theme.font_bold(theme.FONT_SIZE_TITLE),
-            text_color=theme.ACCENT,
-            anchor="w",
-        )
-        logo_label.pack(anchor="w")
+        tk.Label(
+            sidebar, text="KB Manager",
+            font=theme.FONT_SMALL, bg=theme.BG_SIDEBAR,
+            fg=theme.TEXT_ON_SIDEBAR_MUTED, anchor="w",
+        ).pack(fill="x", padx=14, pady=(0, 16))
 
-        subtitle = ctk.CTkLabel(
-            logo_frame,
-            text="KB Manager",
-            font=theme.font(theme.FONT_SIZE_SM),
-            text_color=theme.TEXT_MUTED,
-            anchor="w",
-        )
-        subtitle.pack(anchor="w")
+        # Separator
+        tk.Frame(sidebar, bg="#3d566e", height=1).pack(fill="x", padx=10, pady=(0, 8))
 
-        # Navegación
-        for key, label, icon in NAV_ITEMS:
-            btn = ctk.CTkButton(
-                sidebar,
-                text=f"  {icon}  {label}",
-                height=38,
-                command=lambda k=key: self.navigate(k),
+        # Nav items
+        for key, label in NAV_ITEMS:
+            btn = tk.Label(
+                sidebar, text=f"  {label}",
+                font=theme.FONT_NORMAL, bg=theme.BG_SIDEBAR,
+                fg=theme.TEXT_ON_SIDEBAR_MUTED, anchor="w",
+                padx=10, pady=6, cursor="hand2",
             )
-            theme.style_sidebar_button(btn, active=False)
-            btn.pack(fill="x", padx=10, pady=2)
+            btn.pack(fill="x", padx=6, pady=1)
+            btn.bind("<Button-1>", lambda e, k=key: self.navigate(k))
+            btn.bind("<Enter>", lambda e, b=btn: self._on_nav_hover(b, True))
+            btn.bind("<Leave>", lambda e, b=btn: self._on_nav_hover(b, False))
             self._nav_buttons[key] = btn
 
         # Spacer
-        spacer = ctk.CTkFrame(sidebar, fg_color="transparent")
-        spacer.pack(fill="both", expand=True)
+        tk.Frame(sidebar, bg=theme.BG_SIDEBAR).pack(fill="both", expand=True)
 
-        # Refresh button
-        refresh_btn = ctk.CTkButton(
-            sidebar,
-            text="  \u21BB  Recargar datos",
-            height=34,
-            command=self._refresh_all,
+        # Reload button
+        reload_btn = tk.Label(
+            sidebar, text="↻ Recargar datos",
+            font=theme.FONT_SMALL, bg=theme.BG_SIDEBAR,
+            fg=theme.TEXT_ON_SIDEBAR_MUTED, anchor="w",
+            padx=10, pady=6, cursor="hand2",
         )
-        theme.style_secondary_button(refresh_btn)
-        refresh_btn.pack(fill="x", padx=10, pady=(4, 15))
+        reload_btn.pack(fill="x", padx=6, pady=(0, 12))
+        reload_btn.bind("<Button-1>", lambda e: self._refresh_all())
 
-        # ── Content area ─────────────────────────────────────────────────────
-        self._content_frame = ctk.CTkFrame(
-            self,
-            fg_color=theme.BG_PRIMARY,
-            corner_radius=0,
-        )
-        self._content_frame.grid(row=0, column=1, sticky="nsew")
-        self._content_frame.columnconfigure(0, weight=1)
-        self._content_frame.rowconfigure(0, weight=1)
+        # ── Main area ────────────────────────────────────────────────────────
+        main_area = tk.Frame(self, bg=theme.BG_PRIMARY)
+        main_area.pack(side="left", fill="both", expand=True)
 
-        # ── Statusbar ────────────────────────────────────────────────────────
-        self._statusbar = ctk.CTkFrame(
-            self,
-            height=theme.STATUSBAR_HEIGHT,
-            fg_color=theme.BG_SIDEBAR,
-            corner_radius=0,
-        )
-        self._statusbar.grid(row=1, column=1, sticky="ew")
-        self._statusbar.grid_propagate(False)
+        # ── Statusbar (pack bottom FIRST so content gets remaining space) ──
+        statusbar = tk.Frame(main_area, bg=theme.BG_SECONDARY, height=theme.STATUSBAR_HEIGHT)
+        statusbar.pack(side="bottom", fill="x")
+        statusbar.pack_propagate(False)
 
-        self._status_label = ctk.CTkLabel(
-            self._statusbar,
-            text="",
-            font=theme.font(theme.FONT_SIZE_XS),
-            text_color=theme.TEXT_MUTED,
-            anchor="w",
+        self._content_frame = tk.Frame(main_area, bg=theme.BG_PRIMARY)
+        self._content_frame.pack(fill="both", expand=True)
+
+        tk.Frame(statusbar, bg=theme.BORDER, height=1).pack(side="top", fill="x")
+
+        self._status_label = tk.Label(
+            statusbar, text="", font=theme.FONT_SMALL,
+            bg=theme.BG_SECONDARY, fg=theme.TEXT_SECONDARY, anchor="w",
         )
         self._status_label.pack(side="left", padx=12, pady=4)
         self._update_statusbar()
+
+    def _on_nav_hover(self, btn: tk.Label, entering: bool) -> None:
+        """Hover effect en sidebar items (solo si no es el activo)."""
+        if btn.cget("fg") == theme.TEXT_ON_SIDEBAR_ACTIVE:
+            return
+        btn.configure(bg="#34495e" if entering else theme.BG_SIDEBAR)
 
     def navigate(self, view_name: str) -> None:
         """Navega a una vista específica."""
         if view_name == self._active_view:
             return
 
-        # Update sidebar buttons
+        # Update sidebar
         for key, btn in self._nav_buttons.items():
-            theme.style_sidebar_button(btn, active=(key == view_name))
+            if key == view_name:
+                btn.configure(
+                    bg="#34495e", fg=theme.TEXT_ON_SIDEBAR_ACTIVE,
+                    font=theme.FONT_BOLD,
+                )
+            else:
+                btn.configure(
+                    bg=theme.BG_SIDEBAR, fg=theme.TEXT_ON_SIDEBAR_MUTED,
+                    font=theme.FONT_NORMAL,
+                )
 
         # Destroy current view
         if self._current_view:
@@ -161,13 +152,13 @@ class AppWindow(ctk.CTk):
         # Create new view
         view = self._create_view(view_name)
         if view:
-            view.grid(row=0, column=0, sticky="nsew", in_=self._content_frame)
+            view.pack(fill="both", expand=True, in_=self._content_frame)
             self._current_view = view
             self._active_view = view_name
 
         self._update_statusbar()
 
-    def _create_view(self, name: str) -> ctk.CTkFrame | None:
+    def _create_view(self, name: str) -> tk.Frame | None:
         match name:
             case "dashboard":
                 return DashboardView(
@@ -203,8 +194,6 @@ class AppWindow(ctk.CTk):
         self._bundles.reload()
         self._listings.reload()
         self._update_statusbar()
-
         if self._current_view and hasattr(self._current_view, "refresh"):
             self._current_view.refresh()
-
         logger.info("Datos recargados")
