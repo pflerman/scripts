@@ -2,6 +2,7 @@
 
 import json
 import logging
+import shutil
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -213,8 +214,8 @@ class Catalogo:
         return self._productos.get(sku)
 
     def existe(self, sku: str) -> bool:
-        """Verifica si un SKU ya existe."""
-        return (PRODUCTOS_BASE / sku).exists()
+        """Verifica si un SKU ya existe en el catálogo cargado en memoria."""
+        return sku in self._productos
 
     def crear_producto(
         self,
@@ -307,12 +308,19 @@ class Catalogo:
         return True
 
     def eliminar_producto(self, sku: str) -> bool:
-        """Elimina un producto del catálogo (no borra archivos del disco)."""
+        """Elimina un producto del catálogo y borra su carpeta del disco."""
         if sku not in self._productos:
             return False
         del self._productos[sku]
         self._skus = [s for s in self._skus if s != sku]
         self._save_skus()
+
+        # Borrar carpeta del disco
+        producto_dir = PRODUCTOS_BASE / sku
+        if producto_dir.exists():
+            shutil.rmtree(producto_dir)
+            logger.info("Carpeta eliminada: %s", producto_dir)
+
         logger.info("Producto %s eliminado del catálogo", sku)
         return True
 
