@@ -109,8 +109,9 @@ class ProductosView(tk.Frame):
         self.tree.tag_configure("even", background=theme.TAG_EVEN)
         self.tree.tag_configure("odd", background=theme.TAG_ODD)
 
-        # Doble-click → formulario edición
+        # Doble-click o Enter → formulario edición
         self.tree.bind("<Double-1>", self._on_double_click)
+        self.tree.bind("<Return>", self._on_double_click)
 
         self._populate_tree()
 
