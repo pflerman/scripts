@@ -4,6 +4,7 @@ import json
 import logging
 import tkinter as tk
 from tkinter import ttk
+import unicodedata
 import urllib.error
 import urllib.request
 from typing import Callable
@@ -63,7 +64,16 @@ class ProductosView(tk.Frame):
 
         self._search_var = tk.StringVar()
         self._search_var.trace_add("write", lambda *_: self._on_filter_changed())
-        ttk.Entry(filter_bar, textvariable=self._search_var, width=35).pack(
+        ttk.Entry(filter_bar, textvariable=self._search_var, width=25).pack(
+            side="left", padx=(0, 10), pady=6)
+
+        tk.Label(filter_bar, text="Excluir:", font=theme.FONT_NORMAL,
+                 bg=theme.BG_SECONDARY, fg=theme.TEXT_SECONDARY).pack(
+            side="left", padx=(0, 4), pady=6)
+
+        self._exclude_var = tk.StringVar()
+        self._exclude_var.trace_add("write", lambda *_: self._on_filter_changed())
+        ttk.Entry(filter_bar, textvariable=self._exclude_var, width=20).pack(
             side="left", padx=(0, 6), pady=6)
 
         tk.Button(
@@ -111,30 +121,35 @@ class ProductosView(tk.Frame):
 
     def _clear_filter(self) -> None:
         self._search_var.set("")
+        self._exclude_var.set("")
+
+    @staticmethod
+    def _normalize(text: str) -> str:
+        """Normaliza texto: minúsculas, sin acentos."""
+        nfkd = unicodedata.normalize("NFKD", text.lower())
+        return "".join(c for c in nfkd if not unicodedata.combining(c))
 
     def _filter_productos(self, productos: list[Producto]) -> list[Producto]:
-        query = self._search_var.get().strip()
-        if not query:
+        buscar = self._normalize(self._search_var.get().strip())
+        excluir = self._normalize(self._exclude_var.get().strip())
+
+        buscar_terms = buscar.split() if buscar else []
+        excluir_terms = excluir.split() if excluir else []
+
+        if not buscar_terms and not excluir_terms:
             return productos
-        terms = query.split()
+
         result = []
         for prod in productos:
-            searchable = " ".join([
+            searchable = self._normalize(" ".join([
                 prod.sku, prod.nombre, prod.tipo, prod.modelo,
                 prod.color, prod.notas,
-            ]).lower()
-            match = True
-            for term in terms:
-                if term.startswith("-") and len(term) > 1:
-                    if term[1:].lower() in searchable:
-                        match = False
-                        break
-                else:
-                    if term.lower() not in searchable:
-                        match = False
-                        break
-            if match:
-                result.append(prod)
+            ]))
+            if buscar_terms and not all(t in searchable for t in buscar_terms):
+                continue
+            if excluir_terms and any(t in searchable for t in excluir_terms):
+                continue
+            result.append(prod)
         return result
 
     # ── Tree population ──────────────────────────────────────────────────────
