@@ -306,6 +306,16 @@ class Catalogo:
         prod.save()
         return True
 
+    def eliminar_producto(self, sku: str) -> bool:
+        """Elimina un producto del catálogo (no borra archivos del disco)."""
+        if sku not in self._productos:
+            return False
+        del self._productos[sku]
+        self._skus = [s for s in self._skus if s != sku]
+        self._save_skus()
+        logger.info("Producto %s eliminado del catálogo", sku)
+        return True
+
     def _save_skus(self) -> None:
         """Persiste la lista de SKUs."""
         save_json(CATALOGO_PATH, self._skus)

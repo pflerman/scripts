@@ -363,6 +363,13 @@ class ProductoForm(tk.Toplevel):
             padx=14, pady=4, cursor="hand2", command=self.destroy,
         ).pack(side="left")
 
+        if self._editing:
+            tk.Button(
+                btn_row, text="Eliminar", font=theme.FONT_BOLD,
+                bg=theme.BTN_DANGER, fg="white", relief="flat", bd=0,
+                padx=14, pady=4, cursor="hand2", command=self._delete,
+            ).pack(side="right")
+
     # ── Helpers ──────────────────────────────────────────────────────────────
 
     def _add_field(self, parent: tk.Frame, label: str,
@@ -404,6 +411,27 @@ class ProductoForm(tk.Toplevel):
         sku = generar_sku(prefijo, modelo_cod, color, talle)
         existe = " (YA EXISTE)" if self.catalogo.existe(sku) else ""
         self._sku_label.configure(text=f"SKU: {sku}{existe}")
+
+    # ── Delete ───────────────────────────────────────────────────────────────
+
+    def _delete(self) -> None:
+        """Elimina el producto previa confirmación."""
+        from tkinter import messagebox
+        sku = self._producto.sku
+        if not messagebox.askyesno(
+            "Eliminar producto",
+            f"¿Eliminar producto {sku}?\nEsta acción no se puede deshacer.",
+            parent=self,
+        ):
+            return
+        ok = self.catalogo.eliminar_producto(sku)
+        if ok:
+            self._status_label.configure(text=f"Producto {sku} eliminado", fg=theme.SUCCESS)
+            if self._on_saved:
+                self._on_saved()
+            self.after(800, self.destroy)
+        else:
+            self._status_label.configure(text=f"Error al eliminar {sku}", fg=theme.ERROR)
 
     # ── Save ─────────────────────────────────────────────────────────────────
 
