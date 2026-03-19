@@ -274,6 +274,20 @@ class Catalogo:
         logger.info("Producto creado: %s", sku)
         return producto
 
+    def actualizar_producto(self, sku: str, **campos: Any) -> bool:
+        """Actualiza campos arbitrarios de un producto y guarda a disco."""
+        prod = self.get(sku)
+        if not prod:
+            return False
+        for key, value in campos.items():
+            if key == "variante" and isinstance(value, dict):
+                prod.variante.update(value)
+            elif hasattr(prod, key):
+                setattr(prod, key, value)
+        prod.save()
+        logger.info("Producto %s actualizado: %s", sku, list(campos.keys()))
+        return True
+
     def actualizar_precio(self, sku: str, nuevo_precio: float) -> bool:
         """Actualiza el precio de costo de un producto."""
         prod = self.get(sku)
