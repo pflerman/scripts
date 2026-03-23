@@ -170,13 +170,16 @@ class AppWindow(tk.Tk):
             case "productos":
                 return ProductosView(self._content_frame, catalogo=self._catalogo)
             case "fotos":
-                return FotosView(self._content_frame)
+                return FotosView(self._content_frame, catalogo=self._catalogo)
             case "ia":
-                return IAView(self._content_frame)
+                return IAView(self._content_frame, catalogo=self._catalogo)
             case "bundles":
-                return BundlesView(self._content_frame, bundles=self._bundles)
+                return BundlesView(self._content_frame, bundles=self._bundles,
+                                   catalogo=self._catalogo)
             case "listings":
-                return ListingsView(self._content_frame, listings=self._listings)
+                return ListingsView(self._content_frame, listings=self._listings,
+                                     bundles=self._bundles,
+                                     catalogo=self._catalogo)
             case _:
                 return None
 
