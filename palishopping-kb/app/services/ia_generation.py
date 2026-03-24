@@ -10,7 +10,7 @@ import os
 from datetime import datetime
 from pathlib import Path
 
-from app.config import CLAUDE_MODEL, PRODUCTOS_BASE, TITULO_ML_MAX_CHARS
+from app.config import CLAUDE_MODEL
 
 logger = logging.getLogger(__name__)
 
@@ -24,123 +24,291 @@ def get_anthropic_client():
     return anthropic.Anthropic(api_key=api_key)
 
 
-def generar_titulos(sku: str, producto_data: dict,
-                    palabras_clave: list[str] | None = None) -> list[str]:
-    """Genera 10 títulos ML con Claude AI. Retorna lista de títulos."""
+def generar_titulo(sku: str, producto_data: dict,
+                   palabras_clave: list[str] | None = None,
+                   foto_path: Path | None = None) -> str:
+    """Genera UN título (family_name) ML con Claude AI.
+
+    Si foto_path se provee, usa Claude Vision para analizar la imagen
+    y generar el título desde cero (sin depender del título original).
+    Si no hay foto, usa los datos textuales del producto.
+
+    producto_data puede incluir: nombre, categoria, precio, descripcion,
+    fotos_count, y cualquier campo extra del scraper.
+    """
     client = get_anthropic_client()
     if not client:
         raise RuntimeError("ANTHROPIC_API_KEY no configurada")
 
-    nombre = producto_data.get("nombre", "")
-    tipo = producto_data.get("tipo", "")
-    color = producto_data.get("variante", {}).get("color", "")
-    talle = producto_data.get("variante", {}).get("talle", "")
+    categoria = producto_data.get("categoria", producto_data.get("tipo", ""))
+    precio = producto_data.get("precio", "")
     kws = palabras_clave or producto_data.get("palabras_clave", [])
 
-    prompt = f"""Generá exactamente 10 títulos para una publicación en MercadoLibre Argentina.
+    # Contexto mínimo (categoría y precio, sin título del competidor)
+    contexto_lines = []
+    if categoria:
+        contexto_lines.append(f"- Categoría ML: {categoria}")
+    if precio:
+        contexto_lines.append(f"- Precio: ${precio}")
+    if kws:
+        contexto_lines.append(f"- Palabras clave: {', '.join(kws)}")
+    contexto = "\n".join(contexto_lines) if contexto_lines else "Sin datos adicionales."
 
-Producto:
-- Nombre: {nombre}
-- Tipo: {tipo}
-- Color: {color}
-- Talle/Tamaño: {talle if talle else "no aplica"}
-- Palabras clave: {", ".join(kws) if kws else "ninguna especificada"}
+    reglas = """Reglas de formato:
+- MÁXIMO 60 caracteres (este es el family_name, ML agrega el color automáticamente)
+- Formato Title Case (Primera Letra De Cada Palabra En Mayúscula)
+- Incluir cantidad si aplica (ej: "x12", "6 Niveles")
+- NO incluir color (ML lo agrega del atributo COLOR)
+- NO incluir la marca "Palishopping" (ML la muestra aparte)
+- Sin signos de puntuación, sin comas, sin emojis
 
-Reglas estrictas:
-- Cada título debe tener MÁXIMO 60 caracteres (contarlos con cuidado)
-- Usar la mayor cantidad de caracteres posible dentro del límite
-- Optimizados para búsqueda en MercadoLibre Argentina
-- Sin signos de puntuación, sin caracteres especiales, sin emojis, sin comas
-- No usar mayúsculas innecesarias (solo primera letra de sustantivos propios)
-- Mezclar palabras clave con variaciones creativas y términos de búsqueda populares
-- Variar el orden y estructura entre títulos para cubrir distintas búsquedas
+IMPORTANTE: Contá los caracteres ANTES de responder. Si supera 60, acortalo.
 
-Respondé ÚNICAMENTE con los 10 títulos, uno por línea, sin numeración ni prefijos."""
+Respondé SOLO con el título, nada más."""
 
-    response = client.messages.create(
-        model=CLAUDE_MODEL,
-        max_tokens=1024,
-        messages=[{"role": "user", "content": prompt}],
-    )
+    creatividad = """PROHIBIDO usar estas palabras genéricas que TODOS usan en ML:
+"organizador", "organizadora", "organizadoras", "apilable", "transparente", "pack", "set", "unidades", "cajas organizadoras", "caja organizadora", "multiuso", "multifunción", "práctico", "resistente", "hogar"
 
-    raw = response.content[0].text.strip()
-    titulos = [linea.strip() for linea in raw.splitlines() if linea.strip()]
-    # Limpiar numeración
-    titulos_limpios = []
-    for t in titulos:
-        if t and t[0].isdigit() and len(t) > 2 and t[1] in ".)-":
-            t = t[2:].strip()
-        titulos_limpios.append(t)
+EN CAMBIO, pensá como un copywriter creativo:
+- ¿Cómo le diría una persona a un amigo? "che mirá este zapatero divino"
+- Usá sinónimos frescos y específicos del producto real
+- Ejemplos de sinónimos creativos por categoría:
+  - Zapatos: zapatero, calzadero, guardazapatos, torre de zapatos, cubos exhibidores, vitrinas, módulos
+  - Ropa: perchero, colgador, rack, barra, estante, roperito, porta-trajes
+  - Almacenamiento: cofre, baúl, contenedor, gabinete, estante modular, cubo, celda
+- Buscá ángulos de venta únicos que transmitan valor premium
+- El título debe generar curiosidad y diferenciarse de la competencia"""
 
-    return titulos_limpios[:10]
+    # ── Con foto: Claude Vision ──────────────────────────────────────────────
+    if foto_path and foto_path.exists():
+        imagen_bytes = foto_path.read_bytes()
+        ext = foto_path.suffix.lower()
+        media_type = "image/jpeg" if ext in (".jpg", ".jpeg") else "image/png"
+        imagen_b64 = base64.standard_b64encode(imagen_bytes).decode("utf-8")
+
+        prompt_vision = f"""Esta es la foto de un producto que se vende en MercadoLibre Argentina.
+
+Tu trabajo es crear UN título de venta ÚNICO y CREATIVO que se destaque de los miles de títulos aburridos que ya existen en ML.
+
+{creatividad}
+
+Contexto:
+{contexto}
+
+{reglas}"""
+
+        response = client.messages.create(
+            model=CLAUDE_MODEL,
+            max_tokens=256,
+            messages=[{
+                "role": "user",
+                "content": [
+                    {
+                        "type": "image",
+                        "source": {
+                            "type": "base64",
+                            "media_type": media_type,
+                            "data": imagen_b64,
+                        },
+                    },
+                    {"type": "text", "text": prompt_vision},
+                ],
+            }],
+        )
+    else:
+        # ── Sin foto: fallback a texto ───────────────────────────────────────
+        nombre = producto_data.get("nombre", "")
+        descripcion = producto_data.get("descripcion", "")
+
+        contexto_texto = f"- Título original de la publicación (NO copiarlo): {nombre}"
+        if contexto_lines:
+            contexto_texto += "\n" + contexto
+        if descripcion:
+            contexto_texto += f"\n- Descripción original:\n{descripcion[:500]}"
+
+        prompt_texto = f"""Sos un copywriter creativo experto en MercadoLibre Argentina.
+
+Información del producto:
+{contexto_texto}
+
+Tu trabajo es crear UN título de venta ÚNICO y CREATIVO que se destaque.
+NO copies ni parafrasees el título original. Reinventalo completamente.
+
+{creatividad}
+
+{reglas}"""
+
+        response = client.messages.create(
+            model=CLAUDE_MODEL,
+            max_tokens=256,
+            messages=[{"role": "user", "content": prompt_texto}],
+        )
+
+    titulo = response.content[0].text.strip()
+    # Limpiar numeración si la hay
+    if titulo and titulo[0].isdigit() and len(titulo) > 2 and titulo[1] in ".)-":
+        titulo = titulo[2:].strip()
+    # Limpiar comillas que a veces agrega el modelo
+    titulo = titulo.strip('"\'')
+    # Si respondió con múltiples líneas, tomar solo la primera
+    if "\n" in titulo:
+        titulo = titulo.split("\n")[0].strip()
+
+    # Detectar respuesta descriptiva (Claude "pensando en voz alta")
+    _descriptive = ("," in titulo or len(titulo) > 60)
+    if _descriptive:
+        logger.info("Título parece descriptivo (%d chars), pidiendo resumen...", len(titulo))
+        retry = client.messages.create(
+            model=CLAUDE_MODEL,
+            max_tokens=128,
+            messages=[{"role": "user", "content": (
+                f"Convertí esto en un título de venta para MercadoLibre Argentina.\n"
+                f"MÁXIMO 60 caracteres. Formato Title Case. Sin comas ni puntuación. "
+                f"Sin color ni marca. Solo el título, nada más.\n\n"
+                f"Texto: {titulo}"
+            )}],
+        )
+        titulo = retry.content[0].text.strip().strip('"\'')
+        if "\n" in titulo:
+            titulo = titulo.split("\n")[0].strip()
+
+    # Recortar por última palabra completa si supera 60 chars
+    if len(titulo) > 60:
+        titulo = titulo[:60].rsplit(" ", 1)[0]
+
+    return titulo
 
 
-def generar_descripciones(sku: str, producto_data: dict,
-                          info_adicional: dict | None = None) -> list[str]:
-    """Genera 3 descripciones ML con Claude AI. Retorna lista de descripciones."""
+def generar_descripcion(sku: str, producto_data: dict,
+                        info_adicional: dict | None = None,
+                        foto_path: Path | None = None) -> str:
+    """Genera UNA descripción ML con Claude AI.
+
+    Si foto_path se provee, usa Claude Vision para describir el producto
+    desde la imagen. Si no hay foto, usa los datos textuales.
+
+    producto_data puede incluir: nombre, categoria, precio, descripcion,
+    fotos_count, titulo_ml, y cualquier campo extra del scraper.
+    """
     client = get_anthropic_client()
     if not client:
         raise RuntimeError("ANTHROPIC_API_KEY no configurada")
 
-    nombre = producto_data.get("nombre", "")
-    tipo = producto_data.get("tipo", "")
-    color = producto_data.get("variante", {}).get("color", "")
-    talle = producto_data.get("variante", {}).get("talle", "")
-    titulo = producto_data.get("titulo_ml", "")
+    categoria = producto_data.get("categoria", producto_data.get("tipo", ""))
+    precio = producto_data.get("precio", "")
+    titulo_ml = producto_data.get("titulo_ml", "")
     kws = producto_data.get("palabras_clave", [])
-    notas = producto_data.get("notas", "")
+
+    # Contexto mínimo (sin descripción del competidor cuando hay foto)
+    contexto_lines = []
+    if titulo_ml:
+        contexto_lines.append(f"- Título ML que usamos: {titulo_ml}")
+    if categoria:
+        contexto_lines.append(f"- Categoría ML: {categoria}")
+    if precio:
+        contexto_lines.append(f"- Precio: ${precio}")
+    if kws:
+        contexto_lines.append(f"- Palabras clave: {', '.join(kws)}")
+
     info = info_adicional or {}
+    if info:
+        extras = []
+        if info.get("medidas"):
+            extras.append(f"Medidas: {info['medidas']}")
+        if info.get("material"):
+            extras.append(f"Material: {info['material']}")
+        if info.get("cantidad"):
+            extras.append(f"Contenido del pack: {info['cantidad']}")
+        if info.get("destacar"):
+            extras.append(f"Característica especial: {info['destacar']}")
+        if extras:
+            contexto_lines.append("- Info adicional: " + " | ".join(extras))
 
-    extras = []
-    if info.get("medidas"):
-        extras.append(f"- Medidas: {info['medidas']}")
-    if info.get("material"):
-        extras.append(f"- Material: {info['material']}")
-    if info.get("cantidad"):
-        extras.append(f"- Contenido del pack: {info['cantidad']}")
-    if info.get("destacar"):
-        extras.append(f"- Característica especial: {info['destacar']}")
-    extras_str = "\n".join(extras) if extras else "No se especificaron datos adicionales."
+    contexto = "\n".join(contexto_lines) if contexto_lines else "Sin datos adicionales."
 
-    prompt = f"""Generá exactamente 3 descripciones diferentes para una publicación en MercadoLibre Argentina.
-
-Datos del producto:
-- Nombre: {nombre}
-- Tipo: {tipo}
-- Color: {color}
-- Talle/Tamaño: {talle if talle else "no especificado"}
-- Título ML: {titulo if titulo else "no definido aún"}
-- Palabras clave: {", ".join(kws) if kws else "ninguna"}
-- Notas internas: {notas if notas else "ninguna"}
-
-Información adicional:
-{extras_str}
-
-Criterios de escritura:
-- Estilo de vendedor argentino: cálido, directo, confiable, sin exagerar
-- Estructura: párrafo de apertura + lista de puntos destacados + cierre con llamado a la acción breve
-- Máximo 1500 caracteres por descripción
-- Incluir las palabras clave de forma natural, sin forzar
+    criterios = """Criterios de escritura:
+- Estilo de vendedor argentino: cercano, entusiasta pero creíble, como si le recomendaras algo a un amigo
+- Arrancá con una frase que enganche y haga click emocional, no con "Este producto..."
+- Después meté los detalles concretos del producto (medidas, material, cantidad) solo si los ves o los tenés
+- Cerrá con un llamado a la acción breve y natural
+- Máximo 1500 caracteres
+- NO inventes datos que no se vean en la foto ni estén en el contexto
+- Evitá palabras gastadas: "práctico", "ideal", "perfecto", "excelente calidad", "no te lo pierdas"
 - Sin emojis, sin mayúsculas raras, sin signos de exclamación excesivos
 - Sin HTML ni markdown, sin asteriscos ni símbolos especiales
 - Solo párrafos de texto plano separados por líneas en blanco
-- Nada de listas: todo redactado en prosa continua
-- Cada versión debe tener un enfoque diferente: una más funcional, una más emocional, una más informativa
+- Nada de listas con viñetas: todo redactado en prosa continua
 
-Respondé ÚNICAMENTE con las 3 descripciones separadas por esta línea exacta:
----DESCRIPCION---
+Respondé ÚNICAMENTE con la descripción, sin títulos ni explicación."""
 
-No pongas numeración, títulos ni nada antes de cada descripción."""
+    # ── Con foto: Claude Vision ──────────────────────────────────────────────
+    if foto_path and foto_path.exists():
+        imagen_bytes = foto_path.read_bytes()
+        ext = foto_path.suffix.lower()
+        media_type = "image/jpeg" if ext in (".jpg", ".jpeg") else "image/png"
+        imagen_b64 = base64.standard_b64encode(imagen_bytes).decode("utf-8")
 
-    response = client.messages.create(
-        model=CLAUDE_MODEL,
-        max_tokens=2048,
-        messages=[{"role": "user", "content": prompt}],
-    )
+        prompt_vision = f"""Esta es la foto de un producto que se vende en MercadoLibre Argentina.
 
-    raw = response.content[0].text.strip()
-    partes = [p.strip() for p in raw.split("---DESCRIPCION---") if p.strip()]
-    return partes[:3]
+Escribí UNA descripción de venta que enganche, basándote en lo que ves en la imagen.
+Mencioná lo que realmente se ve: material, tamaño, diseño, cantidad de piezas, para qué sirve.
+NO inventes datos. NO describas la imagen como tal. Escribí como un vendedor que le cuenta a un amigo por qué este producto está bueno.
+Evitá frases genéricas como "excelente calidad", "ideal para", "no te lo pierdas". Sé específico y original.
+
+Contexto:
+{contexto}
+
+{criterios}"""
+
+        response = client.messages.create(
+            model=CLAUDE_MODEL,
+            max_tokens=1024,
+            messages=[{
+                "role": "user",
+                "content": [
+                    {
+                        "type": "image",
+                        "source": {
+                            "type": "base64",
+                            "media_type": media_type,
+                            "data": imagen_b64,
+                        },
+                    },
+                    {"type": "text", "text": prompt_vision},
+                ],
+            }],
+        )
+    else:
+        # ── Sin foto: fallback a texto ───────────────────────────────────────
+        nombre = producto_data.get("nombre", "")
+        descripcion_orig = producto_data.get("descripcion", "")
+
+        contexto_texto = f"- Título original: {nombre}"
+        if contexto_lines:
+            contexto_texto += "\n" + contexto
+        if descripcion_orig:
+            contexto_texto += f"\n- Descripción original del competidor:\n{descripcion_orig[:800]}"
+
+        prompt_texto = f"""Sos un copywriter creativo de MercadoLibre Argentina. Generá UNA descripción de venta que enganche.
+
+Información del producto:
+{contexto_texto}
+
+Tu trabajo:
+1. Extraé las características reales: medidas, material, cantidad, uso
+2. Escribí una descripción específica, original y con personalidad
+3. NO copies la descripción original, reescribila completamente con tu estilo
+4. Arrancá con algo que enganche, no con "Este producto..."
+
+{criterios}"""
+
+        response = client.messages.create(
+            model=CLAUDE_MODEL,
+            max_tokens=1024,
+            messages=[{"role": "user", "content": prompt_texto}],
+        )
+
+    return response.content[0].text.strip()
 
 
 def generar_prompts_gemini(sku: str, foto_path: Path) -> list[dict]:
