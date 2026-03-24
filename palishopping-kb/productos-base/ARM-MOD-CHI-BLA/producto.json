@@ -1,0 +1,30 @@
+{
+  "sku": "ARM-MOD-CHI-BLA",
+  "nombre": "Armario modular plegable chico",
+  "tipo": "Armario modular",
+  "variante": {
+    "modelo": "Chico",
+    "color": "Blanco",
+    "talle": ""
+  },
+  "dimensiones": {
+    "largo_cm": 45.0,
+    "ancho_cm": 34.0,
+    "alto_cm": 13.0
+  },
+  "proveedor": "andres",
+  "precio_fob_usd": 2.2,
+  "factor_nacionalizacion": 1.9,
+  "tipo_cambio_usado": 1435.0,
+  "precio_costo": 5998.299999999999,
+  "stock": 1000,
+  "descripcion": "",
+  "titulo_ml": "",
+  "titulo_web": "",
+  "palabras_clave": [],
+  "ml_categoria_id": "",
+  "listings": [],
+  "notas": "",
+  "fecha_creacion": "2026-03-18T21:15:07",
+  "ultima_actualizacion": "2026-03-18T21:15:07"
+}

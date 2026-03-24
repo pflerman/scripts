@@ -1,0 +1,35 @@
+{
+  "prompts_gemini": [
+    {
+      "timestamp": "2026-03-09T19:06:59.164986",
+      "foto_origen": "03.jpg",
+      "prompts": [
+        {
+          "id": 1,
+          "ambiente": "placard",
+          "prompt": "Modern walk-in closet with modular transparent shoe storage boxes arranged on white built-in shelves, soft LED strip lighting from above creating gentle shadows, contemporary minimalist style, neat organization with various shoes visible inside the boxes, clean white walls, wooden floor, professional product photography with warm 3000K lighting, shallow depth of field, shot from slightly below angle to show the storage system's functionality"
+        },
+        {
+          "id": 2,
+          "ambiente": "habitación",
+          "prompt": "Cozy bedroom corner with stackable shoe organizer boxes placed next to a wooden dresser, natural morning sunlight streaming through sheer curtains, Scandinavian interior design style, beige and white color palette, some boxes containing sneakers and heels, soft textile rug underneath, potted plant in background, lifestyle photography with natural lighting, warm and inviting atmosphere, shot at eye level"
+        },
+        {
+          "id": 3,
+          "ambiente": "entrada de casa",
+          "prompt": "Modern home entryway with modular shoe storage system organized against a white wall, bright overhead recessed lighting with soft shadows, contemporary architectural style, boxes showing different types of footwear, marble floor tiles, minimalist coat rack nearby, clean geometric composition, commercial photography lighting setup, crisp details and sharp focus, three-quarter angle view emphasizing the organizational benefit"
+        },
+        {
+          "id": 4,
+          "ambiente": "living",
+          "prompt": "Stylish living room with shoe storage boxes neatly arranged in a white entertainment center, ambient evening lighting from table lamps creating warm golden tones, mid-century modern decor style, boxes integrated seamlessly with books and decorative objects, hardwood floors with area rug, comfortable seating in background, lifestyle photography with professional studio lighting mixed with practical room lighting, horizontal composition"
+        },
+        {
+          "id": 5,
+          "ambiente": "fondo de estudio",
+          "prompt": "Clean white studio backdrop with modular shoe organizer boxes arranged in an aesthetic stack, professional studio lighting with key light at 45 degrees and fill light to eliminate harsh shadows, commercial product photography style, some boxes open showing premium sneakers and dress shoes, gradient background from white to light gray, high-key lighting setup, macro lens detail capturing the transparent material texture and construction quality"
+        }
+      ]
+    }
+  ]
+}

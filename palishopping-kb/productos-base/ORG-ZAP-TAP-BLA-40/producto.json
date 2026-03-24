@@ -1,0 +1,30 @@
+{
+  "sku": "ORG-ZAP-TAP-BLA-40",
+  "nombre": "Organizador de zapatos tapa rígida talle 40",
+  "tipo": "Organizador de zapatos",
+  "variante": {
+    "modelo": "Tapa rígida",
+    "color": "blanco",
+    "talle": "40"
+  },
+  "dimensiones": {
+    "largo_cm": 29,
+    "ancho_cm": 20,
+    "alto_cm": 11
+  },
+  "proveedor": "andres",
+  "precio_fob_usd": 0.52,
+  "factor_nacionalizacion": 1.9,
+  "tipo_cambio_usado": 1400.0,
+  "precio_costo": 1383.2,
+  "stock": 1000,
+  "descripcion": "",
+  "titulo_ml": "",
+  "titulo_web": "",
+  "palabras_clave": [],
+  "ml_categoria_id": "",
+  "listings": [],
+  "notas": "ver color",
+  "fecha_creacion": "2026-03-12T21:30:43",
+  "ultima_actualizacion": "2026-03-12T21:30:43"
+}

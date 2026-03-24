@@ -1,0 +1,42 @@
+{
+  "sku": "ORG-ZAP-COM-BLA-40",
+  "nombre": "Organizador común talle 40",
+  "tipo": "Organizador de zapatos",
+  "variante": {
+    "color": "Blanco",
+    "talle": "40",
+    "modelo": "Común"
+  },
+  "dimensiones": {
+    "largo_cm": 29.0,
+    "ancho_cm": 20.0,
+    "alto_cm": 11.0
+  },
+  "proveedor": "andres",
+  "precio_costo": 2500.0,
+  "stock": 500,
+  "descripcion": "Organizador de calzado fabricado en plástico transparente resistente, especialmente diseñado para zapatos talle 40. Sus dimensiones de 30x20x15cm proporcionan el espacio necesario para almacenar un par de zapatos de manera segura y ordenada.\n\nEl sistema de tapa plegable permite un acceso cómodo al contenido mientras mantiene la protección contra el polvo. Su construcción transparente funciona como visor, facilitando la identificación inmediata del calzado almacenado sin necesidad de abrir la caja.\n\nLa característica apilable del producto permite crear configuraciones verticales eficientes, optimizando el uso del espacio disponible en placards y vestidores. El acabado en color blanco proporciona una estética neutra que se adapta a diferentes ambientes.\n\nCada pack incluye una unidad completamente funcional. Material duradero que soporta el uso cotidiano manteniendo su transparencia y resistencia estructural a lo largo del tiempo.",
+  "titulo_ml": "Caja organizadora zapatos talle 40 apilable blanca plegable",
+  "titulo_web": "",
+  "palabras_clave": [
+    "organizador zapatos",
+    "talle 40",
+    "transparente",
+    "visor",
+    "calzado",
+    "apilable",
+    "tapa plegable"
+  ],
+  "ml_categoria_id": "",
+  "listings": [],
+  "notas": "Organizador común talle 40 blanco",
+  "fecha_creacion": "2026-03-09T01:31:52",
+  "ultima_actualizacion": "2026-03-19T02:40:54",
+  "fotos_originales_ref": [
+    {
+      "url_fuente": "https://www.mercadolibre.com.ar/organizador-de-zapatos-pack-12-hasta-talle-44-transparente-color-blanco/p/MLA52210509?pdp_filters=condition%3Anew%7Cadult_content%3Ayes%7Cshipping_cost%3Afree%7Cseller_id%3A65600763#polycard_client=mshops-appearance-api&component=tabbed_carousel&wid=MLA2428496524&source=eshops&title=Env%C3%ADo+gratis&tracking_id=b3e54cc498cfa68b00147a67db902c95&sid=storefronts&global_position=7",
+      "fecha_scrapeo": "2026-03-09T02:24:18",
+      "fotos_descargadas": 13
+    }
+  ]
+}
