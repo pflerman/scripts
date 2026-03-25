@@ -213,45 +213,12 @@ def enhance_photos_batch(
     return [r for r in results if r is not None]
 
 
-def add_hype_text(foto_path: Path, producto_info: dict, dest_dir: Path) -> Path:
-    """Agrega texto hype overlay a una foto de producto usando Gemini.
-
-    Args:
-        foto_path: Foto (ya mejorada o original) a la que agregar texto.
-        producto_info: Dict con titulo, categoria, precio del producto.
-        dest_dir: Carpeta destino.
-
-    Returns:
-        Path a la foto con texto hype (o la original si falla).
-    """
+def _apply_hype(foto_path: Path, prompt: str, dest_dir: Path, prefix: str) -> Path:
+    """Aplica un prompt de hype a una foto usando Gemini. Fallback: copia original."""
     from google.genai import types
 
     foto_path = Path(foto_path)
-    output = dest_dir / f"hype_{foto_path.name}"
-
-    titulo = producto_info.get("titulo", "Producto")
-    categoria = producto_info.get("categoria", "")
-    precio = producto_info.get("precio", "")
-
-    prompt = f"""\
-Tenés esta foto de un producto de MercadoLibre Argentina. Necesito que le agregues un BANNER DE VENTA llamativo y profesional, como los que usan los vendedores TOP de MercadoLibre.
-
-El banner debe incluir:
-- Una frase CORTA de impacto (3-6 palabras): 'ENVÍO GRATIS HOY', 'OFERTA IMPERDIBLE', 'LLEGÓ LO QUE BUSCABAS', 'TU HOGAR MERECE ESTO', etc.
-- Elementos gráficos llamativos: estrellas, destellos, flechas, iconos de envío, badges de descuento, sellos de garantía, cintas de oferta
-- Colores vibrantes que contrasten: rojo, amarillo, naranja para urgencia; dorado para premium; verde para envío gratis
-- Puede ser una franja diagonal, un sello circular, un banner en esquina, una cinta cruzada, un sticker estilo 'SALE'
-- Opcionalmente agregar un personaje o ilustración simple: una mano señalando, un pulgar arriba, un ícono de camión de envío, estrellas de rating
-- El estilo debe ser VENDEDOR AGRESIVO de marketplace, no elegante ni minimalista
-- NO tapar el producto principal, usar las esquinas, bordes o zonas libres de la foto
-
-Producto: {titulo}
-Categoría: {categoria}
-Precio: ${precio}
-
-IMPORTANTE: Que el banner se vea como publicidad REAL de MercadoLibre, no como un texto plano sobre la foto. Pensá en los banners que ves en las publicaciones más vendidas de ML.
-
-Devolvé la imagen con el banner agregado."""
+    output = dest_dir / f"{prefix}_{foto_path.name}"
 
     img_bytes = foto_path.read_bytes()
     suffix = foto_path.suffix.lower()
@@ -279,62 +246,136 @@ Devolvé la imagen con el banner agregado."""
         img_bytes_out = _extract_image(response)
         dest_dir.mkdir(parents=True, exist_ok=True)
         output.write_bytes(img_bytes_out)
-        logger.info("Hype text agregado: %s (%d KB)", output, len(img_bytes_out) // 1024)
+        logger.info("Hype %s agregado: %s (%d KB)", prefix, output, len(img_bytes_out) // 1024)
         return output
     except Exception as e:
-        logger.warning("Error agregando hype text a %s: %s — usando original", foto_path.name, e)
+        logger.warning("Error hype %s en %s: %s — usando original", prefix, foto_path.name, e)
         dest_dir.mkdir(parents=True, exist_ok=True)
         shutil.copy2(foto_path, output)
         return output
 
 
-def add_hype_text_batch(
+def add_hype_strong(foto_path: Path, producto_info: dict, dest_dir: Path) -> Path:
+    """Agrega banner de venta agresivo estilo ML a una foto."""
+    titulo = producto_info.get("titulo", "Producto")
+    categoria = producto_info.get("categoria", "")
+    precio = producto_info.get("precio", "")
+
+    prompt = f"""\
+Tenés esta foto de un producto de MercadoLibre Argentina. Necesito que le agregues un BANNER DE VENTA llamativo y profesional, como los que usan los vendedores TOP de MercadoLibre.
+
+El banner debe incluir:
+- Una frase CORTA de impacto (3-6 palabras): 'ENVÍO GRATIS HOY', 'OFERTA IMPERDIBLE', 'LLEGÓ LO QUE BUSCABAS', 'TU HOGAR MERECE ESTO', etc.
+- Elementos gráficos llamativos: estrellas, destellos, flechas, iconos de envío, badges de descuento, sellos de garantía, cintas de oferta
+- Colores vibrantes que contrasten: rojo, amarillo, naranja para urgencia; dorado para premium; verde para envío gratis
+- Puede ser una franja diagonal, un sello circular, un banner en esquina, una cinta cruzada, un sticker estilo 'SALE'
+- Opcionalmente agregar un personaje o ilustración simple: una mano señalando, un pulgar arriba, un ícono de camión de envío, estrellas de rating
+- El estilo debe ser VENDEDOR AGRESIVO de marketplace, no elegante ni minimalista
+- NO tapar el producto principal, usar las esquinas, bordes o zonas libres de la foto
+
+Producto: {titulo}
+Categoría: {categoria}
+Precio: ${precio}
+
+IMPORTANTE: Que el banner se vea como publicidad REAL de MercadoLibre, no como un texto plano sobre la foto. Pensá en los banners que ves en las publicaciones más vendidas de ML.
+
+Devolvé la imagen con el banner agregado."""
+
+    return _apply_hype(foto_path, prompt, dest_dir, "strong")
+
+
+def add_hype_soft(foto_path: Path, producto_info: dict, dest_dir: Path) -> Path:
+    """Agrega texto de venta sutil y elegante a una foto."""
+    titulo = producto_info.get("titulo", "Producto")
+    categoria = producto_info.get("categoria", "")
+    precio = producto_info.get("precio", "")
+
+    prompt = f"""\
+Tenés esta foto de un producto de MercadoLibre Argentina. Agregale un texto de venta sutil pero efectivo.
+
+El texto debe ser:
+- Una frase corta de 3-5 palabras
+- Con tipografía elegante y profesional
+- Colores variados y creativos (NO solo azul): probá dorado, verde, coral, borgoña, turquesa
+- Puede ser en una esquina, un borde inferior, o flotando con sombra suave
+- Estilo más sofisticado y premium, no gritón
+- Ejemplos: 'Diseño que Enamora', 'Calidad Premium', 'Tu Espacio Perfecto', 'Elegancia Diaria'
+- NO tapar el producto
+
+Producto: {titulo}
+Categoría: {categoria}
+Precio: ${precio}
+
+Devolvé la imagen con el texto agregado."""
+
+    return _apply_hype(foto_path, prompt, dest_dir, "soft")
+
+
+def add_hype_batch(
     fotos: list[Path],
-    cantidad_hype: int,
+    cantidad_strong: int,
+    cantidad_soft: int,
     producto_info: dict,
     dest_dir: Path,
     callback=None,
 ) -> list[Path]:
-    """Agrega texto hype a una cantidad aleatoria de fotos del lote.
-
-    Args:
-        fotos: Lista de fotos (mejoradas o originales).
-        cantidad_hype: Cuántas fotos llevan hype (0 = ninguna).
-        producto_info: Dict con titulo, categoria, precio.
-        dest_dir: Carpeta destino para las fotos con hype.
-        callback: Función callback(msg) para progreso.
+    """Aplica hype strong y soft a fotos elegidas al azar.
 
     Returns:
-        Lista de paths en el mismo orden, con hype aplicado a las elegidas.
+        Lista reordenada: primero sin hype, después soft, después strong.
     """
-    if cantidad_hype <= 0 or not fotos:
+    if (cantidad_strong + cantidad_soft) <= 0 or not fotos:
         return list(fotos)
 
-    cantidad_hype = min(cantidad_hype, len(fotos))
+    cantidad_strong = min(cantidad_strong, len(fotos))
+    cantidad_soft = min(cantidad_soft, len(fotos) - cantidad_strong)
     dest_dir.mkdir(parents=True, exist_ok=True)
 
-    # Elegir al azar cuáles llevan hype
-    indices_hype = set(random.sample(range(len(fotos)), cantidad_hype))
-    msg = f"Agregando texto hype a {cantidad_hype} de {len(fotos)} fotos..."
+    all_indices = list(range(len(fotos)))
+
+    # Elegir al azar cuáles llevan strong
+    indices_strong = set(random.sample(all_indices, cantidad_strong))
+    # De las restantes, elegir soft
+    remaining = [i for i in all_indices if i not in indices_strong]
+    indices_soft = set(random.sample(remaining, cantidad_soft))
+
+    indices_clean = [i for i in all_indices if i not in indices_strong and i not in indices_soft]
+
+    msg = (f"Hype batch: {cantidad_strong} strong, {cantidad_soft} soft, "
+           f"{len(indices_clean)} sin hype de {len(fotos)} fotos")
     logger.info(msg)
     if callback:
         callback(msg)
 
-    resultado: list[Path] = []
+    # Procesar cada foto
+    processed: dict[int, Path] = {}
     for i, foto in enumerate(fotos):
-        if i in indices_hype:
-            msg = f"Hype foto {i + 1}/{len(fotos)}..."
+        if i in indices_strong:
+            msg = f"Hype FUERTE foto {i + 1}/{len(fotos)}..."
             logger.info(msg)
             if callback:
                 callback(msg)
-            resultado.append(add_hype_text(foto, producto_info, dest_dir))
+            processed[i] = add_hype_strong(foto, producto_info, dest_dir)
+        elif i in indices_soft:
+            msg = f"Hype SUAVE foto {i + 1}/{len(fotos)}..."
+            logger.info(msg)
+            if callback:
+                callback(msg)
+            processed[i] = add_hype_soft(foto, producto_info, dest_dir)
         else:
-            # Copiar tal cual
-            output = dest_dir / f"hype_{foto.name}"
+            output = dest_dir / f"clean_{foto.name}"
             shutil.copy2(foto, output)
-            resultado.append(output)
+            processed[i] = output
 
-    msg = f"Hype completado: {cantidad_hype} fotos con texto, {len(fotos) - cantidad_hype} sin cambios"
+    # Reordenar: sin hype primero, después soft, después strong
+    resultado = (
+        [processed[i] for i in indices_clean]
+        + [processed[i] for i in sorted(indices_soft)]
+        + [processed[i] for i in sorted(indices_strong)]
+    )
+
+    msg = (f"Hype completado: {len(indices_clean)} limpias + "
+           f"{cantidad_soft} soft + {cantidad_strong} strong")
     logger.info(msg)
     if callback:
         callback(msg)

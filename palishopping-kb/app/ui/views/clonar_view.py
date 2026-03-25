@@ -419,26 +419,66 @@ class ClonarView(tk.Frame):
             bg=theme.BG_CARD, fg=theme.TEXT_MUTED)
         self._fotos_total_label.pack(side="left", padx=(4, 0))
 
-        hype_row = tk.Frame(opts_inner, bg=theme.BG_CARD)
-        hype_row.pack(anchor="w", pady=(4, 0))
+        strong_row = tk.Frame(opts_inner, bg=theme.BG_CARD)
+        strong_row.pack(anchor="w", pady=(4, 0))
 
-        tk.Label(hype_row, text="Fotos con hype:", font=theme.FONT_NORMAL,
+        tk.Label(strong_row, text="Hype FUERTE:", font=theme.FONT_NORMAL,
                  bg=theme.BG_CARD, fg=theme.TEXT_PRIMARY).pack(side="left")
 
-        self._hype_var = tk.StringVar(value="0")
-        self._hype_combo = ttk.Combobox(
-            hype_row, textvariable=self._hype_var, state="readonly",
-            values=[str(i) for i in range(n_fotos + 1)], width=4)
-        self._hype_combo.pack(side="left", padx=(6, 0))
+        self._hype_strong_var = tk.StringVar(value="0")
+        self._hype_strong_combo = ttk.Combobox(
+            strong_row, textvariable=self._hype_strong_var, state="readonly",
+            values=[str(i) for i in range(max(n_fotos, 1))], width=4)
+        self._hype_strong_combo.pack(side="left", padx=(6, 0))
 
-        # Cuando cambia "fotos a procesar", actualizar máximo de hype
-        def _on_fotos_procesar_change(event=None):
-            nuevo_max = int(self._fotos_procesar_var.get() or "1")
-            self._hype_combo["values"] = [str(i) for i in range(nuevo_max + 1)]
-            if int(self._hype_var.get() or "0") > nuevo_max:
-                self._hype_var.set(str(nuevo_max))
+        soft_row = tk.Frame(opts_inner, bg=theme.BG_CARD)
+        soft_row.pack(anchor="w", pady=(4, 0))
 
-        self._fotos_procesar_combo.bind("<<ComboboxSelected>>", _on_fotos_procesar_change)
+        tk.Label(soft_row, text="Hype SUAVE:", font=theme.FONT_NORMAL,
+                 bg=theme.BG_CARD, fg=theme.TEXT_PRIMARY).pack(side="left")
+
+        self._hype_soft_var = tk.StringVar(value="0")
+        self._hype_soft_combo = ttk.Combobox(
+            soft_row, textvariable=self._hype_soft_var, state="readonly",
+            values=[str(i) for i in range(max(n_fotos, 1))], width=4)
+        self._hype_soft_combo.pack(side="left", padx=(6, 0))
+
+        self._hype_warning_label = tk.Label(
+            opts_inner, text="", font=theme.FONT_SMALL,
+            bg=theme.BG_CARD, fg=theme.WARNING)
+        self._hype_warning_label.pack(anchor="w")
+
+        def _recalc_hype_limits(event=None):
+            procesar = int(self._fotos_procesar_var.get() or "1")
+            strong = int(self._hype_strong_var.get() or "0")
+            soft = int(self._hype_soft_var.get() or "0")
+
+            max_hype_total = procesar - 1  # al menos 1 sin hype
+
+            # Ajustar strong si excede
+            max_strong = max_hype_total
+            if strong > max_strong:
+                strong = max_strong
+                self._hype_strong_var.set(str(strong))
+            self._hype_strong_combo["values"] = [str(i) for i in range(max_strong + 1)]
+
+            # Ajustar soft según lo que queda
+            max_soft = max_hype_total - strong
+            if soft > max_soft:
+                soft = max_soft
+                self._hype_soft_var.set(str(soft))
+            self._hype_soft_combo["values"] = [str(i) for i in range(max_soft + 1)]
+
+            # Warning
+            if strong + soft >= procesar:
+                self._hype_warning_label.configure(
+                    text="Al menos 1 foto debe quedar sin hype para usar como portada. Ajustá los valores.")
+            else:
+                self._hype_warning_label.configure(text="")
+
+        self._fotos_procesar_combo.bind("<<ComboboxSelected>>", _recalc_hype_limits)
+        self._hype_strong_combo.bind("<<ComboboxSelected>>", _recalc_hype_limits)
+        self._hype_soft_combo.bind("<<ComboboxSelected>>", _recalc_hype_limits)
 
         # ── Botón PUBLICAR ────────────────────────────────────────────────────
         self._btn_publicar = tk.Button(
@@ -575,10 +615,12 @@ class ClonarView(tk.Frame):
         self._log.log(f"Precio: ${precio:,.0f} ARS")
         self._log.log(f"Stock: {stock}")
         fotos_procesar = int(self._fotos_procesar_var.get() or str(len(self._fotos_descargadas)))
-        hype_count = int(self._hype_var.get() or "0")
+        hype_strong = int(self._hype_strong_var.get() or "0")
+        hype_soft = int(self._hype_soft_var.get() or "0")
         self._log.log(f"Fotos a procesar: {fotos_procesar} de {len(self._fotos_descargadas)}")
         self._log.log(f"Gemini: {'Sí' if usar_gemini else 'No'}")
-        self._log.log(f"Fotos con hype: {hype_count}")
+        self._log.log(f"Hype FUERTE: {hype_strong}")
+        self._log.log(f"Hype SUAVE: {hype_soft}")
         self._log.log(f"Colores: {', '.join(colores_sel)}")
         self._log.log(f"\nSe publicarían {len(colores_sel)} ítem(s):")
         for color in colores_sel:
@@ -613,8 +655,18 @@ class ClonarView(tk.Frame):
         category = self._cat_entry.get().strip() or "MLA414192"
         descripcion = self._desc_text.get("1.0", "end").strip()
         usar_gemini = self._gemini_var.get()
-        cantidad_hype = int(self._hype_var.get() or "0")
+        hype_strong = int(self._hype_strong_var.get() or "0")
+        hype_soft = int(self._hype_soft_var.get() or "0")
         fotos_procesar = int(self._fotos_procesar_var.get() or str(len(self._fotos_descargadas)))
+
+        # Validar que quede al menos 1 foto sin hype
+        if fotos_procesar - hype_strong - hype_soft < 1:
+            from tkinter import messagebox
+            messagebox.showwarning(
+                "Hype",
+                "Al menos una foto debe quedar sin hype para la portada.\n"
+                "Ajustá los desplegables de hype.")
+            return
 
         self._set_processing(True, "Publicando...")
         self._log.log("\n═══ PUBLICACIÓN EN CURSO ═══")
@@ -666,11 +718,13 @@ class ClonarView(tk.Frame):
                 elif usar_gemini and not fotos_a_usar:
                     self._log_safe("Gemini habilitado pero no hay fotos descargadas")
 
-                # Paso 1.5: Agregar texto hype a algunas fotos
-                if cantidad_hype > 0 and fotos_a_usar:
-                    self._log_safe(f"Agregando texto hype a {cantidad_hype} de {len(fotos_a_usar)} fotos...")
+                # Paso 1.5: Agregar texto hype (strong + soft)
+                if (hype_strong + hype_soft) > 0 and fotos_a_usar:
+                    self._log_safe(
+                        f"Aplicando hype: {hype_strong} fuerte + {hype_soft} suave "
+                        f"de {len(fotos_a_usar)} fotos...")
                     try:
-                        from app.services.gemini_images import add_hype_text_batch
+                        from app.services.gemini_images import add_hype_batch
                         datos = self._datos_item or {}
                         producto_info = {
                             "titulo": datos.get("titulo", ""),
@@ -678,8 +732,9 @@ class ClonarView(tk.Frame):
                             "precio": datos.get("precio", 0),
                         }
                         hype_dest = fotos_a_usar[0].parent / "hype"
-                        fotos_a_usar = add_hype_text_batch(
-                            fotos_a_usar, cantidad_hype, producto_info, hype_dest,
+                        fotos_a_usar = add_hype_batch(
+                            fotos_a_usar, hype_strong, hype_soft,
+                            producto_info, hype_dest,
                             callback=lambda msg: self._log_safe(f"  {msg}"))
                     except Exception as e:
                         self._log_safe(f"Hype error: {e} — continuando sin hype")
