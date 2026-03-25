@@ -1,4 +1,6 @@
+anthropic
 beautifulsoup4
+google-genai
 Pillow
 python-dotenv
 requests
