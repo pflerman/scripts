@@ -6,6 +6,8 @@ Requiere: GEMINI_API_KEY en env o en ~/Proyectos/gemini-test/.env
 
 import logging
 import os
+import random
+import shutil
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
 from pathlib import Path
 
@@ -209,3 +211,132 @@ def enhance_photos_batch(
                 callback(msg)
 
     return [r for r in results if r is not None]
+
+
+def add_hype_text(foto_path: Path, producto_info: dict, dest_dir: Path) -> Path:
+    """Agrega texto hype overlay a una foto de producto usando Gemini.
+
+    Args:
+        foto_path: Foto (ya mejorada o original) a la que agregar texto.
+        producto_info: Dict con titulo, categoria, precio del producto.
+        dest_dir: Carpeta destino.
+
+    Returns:
+        Path a la foto con texto hype (o la original si falla).
+    """
+    from google.genai import types
+
+    foto_path = Path(foto_path)
+    output = dest_dir / f"hype_{foto_path.name}"
+
+    titulo = producto_info.get("titulo", "Producto")
+    categoria = producto_info.get("categoria", "")
+    precio = producto_info.get("precio", "")
+
+    prompt = f"""\
+Tenés esta foto de un producto de MercadoLibre Argentina. Necesito que le agregues un BANNER DE VENTA llamativo y profesional, como los que usan los vendedores TOP de MercadoLibre.
+
+El banner debe incluir:
+- Una frase CORTA de impacto (3-6 palabras): 'ENVÍO GRATIS HOY', 'OFERTA IMPERDIBLE', 'LLEGÓ LO QUE BUSCABAS', 'TU HOGAR MERECE ESTO', etc.
+- Elementos gráficos llamativos: estrellas, destellos, flechas, iconos de envío, badges de descuento, sellos de garantía, cintas de oferta
+- Colores vibrantes que contrasten: rojo, amarillo, naranja para urgencia; dorado para premium; verde para envío gratis
+- Puede ser una franja diagonal, un sello circular, un banner en esquina, una cinta cruzada, un sticker estilo 'SALE'
+- Opcionalmente agregar un personaje o ilustración simple: una mano señalando, un pulgar arriba, un ícono de camión de envío, estrellas de rating
+- El estilo debe ser VENDEDOR AGRESIVO de marketplace, no elegante ni minimalista
+- NO tapar el producto principal, usar las esquinas, bordes o zonas libres de la foto
+
+Producto: {titulo}
+Categoría: {categoria}
+Precio: ${precio}
+
+IMPORTANTE: Que el banner se vea como publicidad REAL de MercadoLibre, no como un texto plano sobre la foto. Pensá en los banners que ves en las publicaciones más vendidas de ML.
+
+Devolvé la imagen con el banner agregado."""
+
+    img_bytes = foto_path.read_bytes()
+    suffix = foto_path.suffix.lower()
+    mime = "image/jpeg" if suffix in (".jpg", ".jpeg") else "image/png"
+
+    client = _get_client()
+
+    def _call():
+        return client.models.generate_content(
+            model=MODEL,
+            contents=[
+                types.Content(parts=[
+                    types.Part.from_bytes(data=img_bytes, mime_type=mime),
+                    types.Part.from_text(text=prompt),
+                ])
+            ],
+            config=types.GenerateContentConfig(response_modalities=["IMAGE", "TEXT"]),
+        )
+
+    try:
+        with ThreadPoolExecutor(max_workers=1) as ex:
+            future = ex.submit(_call)
+            response = future.result(timeout=TIMEOUT)
+
+        img_bytes_out = _extract_image(response)
+        dest_dir.mkdir(parents=True, exist_ok=True)
+        output.write_bytes(img_bytes_out)
+        logger.info("Hype text agregado: %s (%d KB)", output, len(img_bytes_out) // 1024)
+        return output
+    except Exception as e:
+        logger.warning("Error agregando hype text a %s: %s — usando original", foto_path.name, e)
+        dest_dir.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(foto_path, output)
+        return output
+
+
+def add_hype_text_batch(
+    fotos: list[Path],
+    cantidad_hype: int,
+    producto_info: dict,
+    dest_dir: Path,
+    callback=None,
+) -> list[Path]:
+    """Agrega texto hype a una cantidad aleatoria de fotos del lote.
+
+    Args:
+        fotos: Lista de fotos (mejoradas o originales).
+        cantidad_hype: Cuántas fotos llevan hype (0 = ninguna).
+        producto_info: Dict con titulo, categoria, precio.
+        dest_dir: Carpeta destino para las fotos con hype.
+        callback: Función callback(msg) para progreso.
+
+    Returns:
+        Lista de paths en el mismo orden, con hype aplicado a las elegidas.
+    """
+    if cantidad_hype <= 0 or not fotos:
+        return list(fotos)
+
+    cantidad_hype = min(cantidad_hype, len(fotos))
+    dest_dir.mkdir(parents=True, exist_ok=True)
+
+    # Elegir al azar cuáles llevan hype
+    indices_hype = set(random.sample(range(len(fotos)), cantidad_hype))
+    msg = f"Agregando texto hype a {cantidad_hype} de {len(fotos)} fotos..."
+    logger.info(msg)
+    if callback:
+        callback(msg)
+
+    resultado: list[Path] = []
+    for i, foto in enumerate(fotos):
+        if i in indices_hype:
+            msg = f"Hype foto {i + 1}/{len(fotos)}..."
+            logger.info(msg)
+            if callback:
+                callback(msg)
+            resultado.append(add_hype_text(foto, producto_info, dest_dir))
+        else:
+            # Copiar tal cual
+            output = dest_dir / f"hype_{foto.name}"
+            shutil.copy2(foto, output)
+            resultado.append(output)
+
+    msg = f"Hype completado: {cantidad_hype} fotos con texto, {len(fotos) - cantidad_hype} sin cambios"
+    logger.info(msg)
+    if callback:
+        callback(msg)
+
+    return resultado

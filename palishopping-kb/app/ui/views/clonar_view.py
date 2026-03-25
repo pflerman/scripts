@@ -20,6 +20,10 @@ COLORES_ML = {
     "Rosa": "51994",
     "Turquesa": "283160",
     "Gris": "283165",
+    "Verde": "52014",
+    "Azul": "52028",
+    "Rojo": "51993",
+    "Transparente": "52055",
     "Combinado Blanco Negro": "63068037",
 }
 
@@ -396,6 +400,46 @@ class ClonarView(tk.Frame):
             font=theme.FONT_NORMAL, bg=theme.BG_CARD, activebackground=theme.BG_CARD,
             variable=self._gemini_var).pack(anchor="w")
 
+        n_fotos = len(self._fotos_descargadas)
+
+        fotos_row = tk.Frame(opts_inner, bg=theme.BG_CARD)
+        fotos_row.pack(anchor="w", pady=(4, 0))
+
+        tk.Label(fotos_row, text="Fotos a procesar:", font=theme.FONT_NORMAL,
+                 bg=theme.BG_CARD, fg=theme.TEXT_PRIMARY).pack(side="left")
+
+        self._fotos_procesar_var = tk.StringVar(value=str(n_fotos))
+        self._fotos_procesar_combo = ttk.Combobox(
+            fotos_row, textvariable=self._fotos_procesar_var, state="readonly",
+            values=[str(i) for i in range(1, n_fotos + 1)], width=4)
+        self._fotos_procesar_combo.pack(side="left", padx=(6, 0))
+
+        self._fotos_total_label = tk.Label(
+            fotos_row, text=f"de {n_fotos}", font=theme.FONT_SMALL,
+            bg=theme.BG_CARD, fg=theme.TEXT_MUTED)
+        self._fotos_total_label.pack(side="left", padx=(4, 0))
+
+        hype_row = tk.Frame(opts_inner, bg=theme.BG_CARD)
+        hype_row.pack(anchor="w", pady=(4, 0))
+
+        tk.Label(hype_row, text="Fotos con hype:", font=theme.FONT_NORMAL,
+                 bg=theme.BG_CARD, fg=theme.TEXT_PRIMARY).pack(side="left")
+
+        self._hype_var = tk.StringVar(value="0")
+        self._hype_combo = ttk.Combobox(
+            hype_row, textvariable=self._hype_var, state="readonly",
+            values=[str(i) for i in range(n_fotos + 1)], width=4)
+        self._hype_combo.pack(side="left", padx=(6, 0))
+
+        # Cuando cambia "fotos a procesar", actualizar máximo de hype
+        def _on_fotos_procesar_change(event=None):
+            nuevo_max = int(self._fotos_procesar_var.get() or "1")
+            self._hype_combo["values"] = [str(i) for i in range(nuevo_max + 1)]
+            if int(self._hype_var.get() or "0") > nuevo_max:
+                self._hype_var.set(str(nuevo_max))
+
+        self._fotos_procesar_combo.bind("<<ComboboxSelected>>", _on_fotos_procesar_change)
+
         # ── Botón PUBLICAR ────────────────────────────────────────────────────
         self._btn_publicar = tk.Button(
             parent, text="Publicar en MercadoLibre", font=theme.FONT_SUBTITLE,
@@ -530,8 +574,11 @@ class ClonarView(tk.Frame):
         self._log.log(f"Categoría: {category}")
         self._log.log(f"Precio: ${precio:,.0f} ARS")
         self._log.log(f"Stock: {stock}")
-        self._log.log(f"Fotos: {len(self._fotos_descargadas)} descargadas")
+        fotos_procesar = int(self._fotos_procesar_var.get() or str(len(self._fotos_descargadas)))
+        hype_count = int(self._hype_var.get() or "0")
+        self._log.log(f"Fotos a procesar: {fotos_procesar} de {len(self._fotos_descargadas)}")
         self._log.log(f"Gemini: {'Sí' if usar_gemini else 'No'}")
+        self._log.log(f"Fotos con hype: {hype_count}")
         self._log.log(f"Colores: {', '.join(colores_sel)}")
         self._log.log(f"\nSe publicarían {len(colores_sel)} ítem(s):")
         for color in colores_sel:
@@ -566,6 +613,8 @@ class ClonarView(tk.Frame):
         category = self._cat_entry.get().strip() or "MLA414192"
         descripcion = self._desc_text.get("1.0", "end").strip()
         usar_gemini = self._gemini_var.get()
+        cantidad_hype = int(self._hype_var.get() or "0")
+        fotos_procesar = int(self._fotos_procesar_var.get() or str(len(self._fotos_descargadas)))
 
         self._set_processing(True, "Publicando...")
         self._log.log("\n═══ PUBLICACIÓN EN CURSO ═══")
@@ -582,9 +631,12 @@ class ClonarView(tk.Frame):
                 fn = build_family_name(family_name)
                 desc = clean_description(descripcion)
 
-                # Paso 1: Mejorar fotos con Gemini si está habilitado
-                fotos_a_usar = list(self._fotos_descargadas)
-                self._log_safe(f"Gemini habilitado: {usar_gemini} | Fotos disponibles: {len(fotos_a_usar)}")
+                # Paso 0: Tomar solo las primeras N fotos
+                fotos_a_usar = list(self._fotos_descargadas[:fotos_procesar])
+                self._log_safe(
+                    f"Usando {len(fotos_a_usar)} de {len(self._fotos_descargadas)} fotos "
+                    f"(primeras {len(fotos_a_usar)} en orden)"
+                )
                 if usar_gemini and fotos_a_usar:
                     self._log_safe(f"Procesando {len(fotos_a_usar)} fotos con Gemini (Nano Banana)...")
                     try:
@@ -613,6 +665,24 @@ class ClonarView(tk.Frame):
                         self._log_safe("Usando fotos originales")
                 elif usar_gemini and not fotos_a_usar:
                     self._log_safe("Gemini habilitado pero no hay fotos descargadas")
+
+                # Paso 1.5: Agregar texto hype a algunas fotos
+                if cantidad_hype > 0 and fotos_a_usar:
+                    self._log_safe(f"Agregando texto hype a {cantidad_hype} de {len(fotos_a_usar)} fotos...")
+                    try:
+                        from app.services.gemini_images import add_hype_text_batch
+                        datos = self._datos_item or {}
+                        producto_info = {
+                            "titulo": datos.get("titulo", ""),
+                            "categoria": datos.get("category_id", ""),
+                            "precio": datos.get("precio", 0),
+                        }
+                        hype_dest = fotos_a_usar[0].parent / "hype"
+                        fotos_a_usar = add_hype_text_batch(
+                            fotos_a_usar, cantidad_hype, producto_info, hype_dest,
+                            callback=lambda msg: self._log_safe(f"  {msg}"))
+                    except Exception as e:
+                        self._log_safe(f"Hype error: {e} — continuando sin hype")
 
                 # Paso 2: Subir fotos a ML
                 self._log_safe(f"Subiendo {len(fotos_a_usar)} fotos a MercadoLibre...")
