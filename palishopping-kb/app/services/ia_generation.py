@@ -362,9 +362,10 @@ REGLAS PARA EL PROMPT QUE GENERES:
 4. Especificá ubicación EXACTA: 'esquina superior derecha', 'franja diagonal de esquina a esquina', 'banner inferior ocupando el 20% de la imagen', etc.
 5. El elemento debe ser GRANDE y VISIBLE, no un textito chiquito en una esquina.
 
+PROHIBIDO mencionar precios, descuentos con números, o montos en pesos. En vez de precio usá frases como: 'Envío Gratis', 'Más de 1000 Vendidos', 'Garantía Total', 'Pack x12', 'Últimas Unidades', 'MercadoLíder', o cualquier beneficio que no sea un número de precio.
+
 Producto: {titulo}
 Categoría: {categoria}
-Precio: ${precio}
 
 FORMATO DE RESPUESTA:
 FRASE: [la frase exacta que elegiste]
@@ -409,9 +410,10 @@ REGLAS:
 4. Elegí UNA ubicación diferente cada vez con un detalle decorativo.
 5. El resultado debe verse como una publicación profesional de Instagram o una revista, no como texto pegado encima.
 
+PROHIBIDO mencionar precios, descuentos con números, o montos en pesos. En vez de precio usá frases como: 'Envío Gratis', 'Más de 1000 Vendidos', 'Garantía Total', 'Pack x12', 'Últimas Unidades', 'MercadoLíder', o cualquier beneficio que no sea un número de precio.
+
 Producto: {titulo}
 Categoría: {categoria}
-Precio: ${precio}
 
 FORMATO DE RESPUESTA:
 FRASE: [la frase exacta que elegiste]
