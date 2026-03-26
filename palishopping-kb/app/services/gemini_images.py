@@ -255,15 +255,19 @@ def _apply_hype(foto_path: Path, prompt: str, dest_dir: Path, prefix: str) -> Pa
         return output
 
 
-def add_hype_strong(foto_path: Path, producto_info: dict, dest_dir: Path) -> Path:
+def add_hype_strong(foto_path: Path, producto_info: dict, dest_dir: Path,
+                    frases_usadas: list[str] | None = None) -> tuple[Path, str]:
     """Agrega banner de venta agresivo estilo ML a una foto.
 
     Usa Claude para generar un prompt único y creativo, luego Gemini lo ejecuta.
+
+    Returns:
+        Tupla (path resultado, prompt generado para acumular en frases_usadas).
     """
     from app.services.ia_generation import generar_prompt_hype_strong
 
     try:
-        prompt = generar_prompt_hype_strong(producto_info)
+        prompt = generar_prompt_hype_strong(producto_info, frases_usadas)
         prompt += "\n\nNO tapar el producto principal. Devolvé la imagen con los cambios."
         logger.info("Prompt hype strong generado por Claude: %s", prompt[:120])
     except Exception as e:
@@ -275,18 +279,22 @@ def add_hype_strong(foto_path: Path, producto_info: dict, dest_dir: Path) -> Pat
             f"NO tapar el producto principal. Devolvé la imagen con los cambios."
         )
 
-    return _apply_hype(foto_path, prompt, dest_dir, "strong")
+    return _apply_hype(foto_path, prompt, dest_dir, "strong"), prompt[:80]
 
 
-def add_hype_soft(foto_path: Path, producto_info: dict, dest_dir: Path) -> Path:
-    """Agrega texto de venta sutil y elegante a una foto.
+def add_hype_soft(foto_path: Path, producto_info: dict, dest_dir: Path,
+                  frases_usadas: list[str] | None = None) -> tuple[Path, str]:
+    """Agrega texto de venta elegante con presencia a una foto.
 
     Usa Claude para generar un prompt único y creativo, luego Gemini lo ejecuta.
+
+    Returns:
+        Tupla (path resultado, prompt generado para acumular en frases_usadas).
     """
     from app.services.ia_generation import generar_prompt_hype_soft
 
     try:
-        prompt = generar_prompt_hype_soft(producto_info)
+        prompt = generar_prompt_hype_soft(producto_info, frases_usadas)
         prompt += "\n\nNO tapar el producto. Devolvé la imagen con el texto agregado."
         logger.info("Prompt hype soft generado por Claude: %s", prompt[:120])
     except Exception as e:
@@ -298,7 +306,7 @@ def add_hype_soft(foto_path: Path, producto_info: dict, dest_dir: Path) -> Path:
             f"NO tapar el producto. Devolvé la imagen con el texto agregado."
         )
 
-    return _apply_hype(foto_path, prompt, dest_dir, "soft")
+    return _apply_hype(foto_path, prompt, dest_dir, "soft"), prompt[:80]
 
 
 def add_hype_batch(
@@ -337,21 +345,26 @@ def add_hype_batch(
     if callback:
         callback(msg)
 
-    # Procesar cada foto
+    # Procesar cada foto — acumular frases para evitar repeticiones
     processed: dict[int, Path] = {}
+    frases_usadas: list[str] = []
     for i, foto in enumerate(fotos):
         if i in indices_strong:
             msg = f"Hype FUERTE foto {i + 1}/{len(fotos)}..."
             logger.info(msg)
             if callback:
                 callback(msg)
-            processed[i] = add_hype_strong(foto, producto_info, dest_dir)
+            path, frase = add_hype_strong(foto, producto_info, dest_dir, frases_usadas)
+            processed[i] = path
+            frases_usadas.append(frase)
         elif i in indices_soft:
             msg = f"Hype SUAVE foto {i + 1}/{len(fotos)}..."
             logger.info(msg)
             if callback:
                 callback(msg)
-            processed[i] = add_hype_soft(foto, producto_info, dest_dir)
+            path, frase = add_hype_soft(foto, producto_info, dest_dir, frases_usadas)
+            processed[i] = path
+            frases_usadas.append(frase)
         else:
             output = dest_dir / f"clean_{foto.name}"
             shutil.copy2(foto, output)

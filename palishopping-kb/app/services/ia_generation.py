@@ -311,7 +311,8 @@ Tu trabajo:
     return response.content[0].text.strip()
 
 
-def generar_prompt_hype_strong(producto_info: dict) -> str:
+def generar_prompt_hype_strong(producto_info: dict,
+                               frases_usadas: list[str] | None = None) -> str:
     """Genera un prompt creativo y único para hype fuerte usando Claude."""
     client = get_anthropic_client()
     if not client:
@@ -321,11 +322,16 @@ def generar_prompt_hype_strong(producto_info: dict) -> str:
     categoria = producto_info.get("categoria", "")
     precio = producto_info.get("precio", "")
 
+    bloque_usadas = ""
+    if frases_usadas:
+        bloque_usadas = f"\nFRASES YA USADAS EN ESTA PUBLICACIÓN (NO las repitas bajo ningún concepto): {', '.join(frases_usadas)}\n"
+
     prompt = f"""\
 Generá un prompt para una IA de imágenes (Gemini) que va a recibir una foto de producto y tiene que agregarle elementos gráficos de venta AGRESIVOS.
 
 REGLAS PARA EL PROMPT QUE GENERES:
 1. Inventá una frase NUEVA y ÚNICA de 3-6 palabras en español argentino. PROHIBIDO usar: 'Elegancia Diaria', 'Calidad Premium', 'Oferta Imperdible', 'Orden Que Inspira', 'Tu Clóset Te Agradece'. Inventá algo que NUNCA se haya usado.
+{bloque_usadas}\
 2. Describí EXACTAMENTE qué elementos gráficos agregar. NO digas 'agregá un banner'. Sé ESPECÍFICO: 'Agregá un sticker circular 3D color verde neón en la esquina superior derecha con la frase X en tipografía bold blanca con sombra negra' o 'Agregá una cinta diagonal roja desde la esquina superior izquierda hasta el centro con texto dorado metálico que diga X' o 'Agregá un globo de texto estilo cómic en amarillo eléctrico con borde negro grueso en la parte inferior que diga X'
 3. Especificá colores EXACTOS, no 'colores vibrantes'. Elegí UNA paleta concreta: verde neón + negro, fucsia + dorado, celeste eléctrico + blanco, naranja fluo + violeta, etc.
 4. Especificá ubicación EXACTA: 'esquina superior derecha', 'franja diagonal de esquina a esquina', 'banner inferior ocupando el 20% de la imagen', etc.
@@ -346,7 +352,8 @@ Respondé SOLO con el prompt para Gemini. Que sea largo y detallado (mínimo 100
     return response.content[0].text.strip()
 
 
-def generar_prompt_hype_soft(producto_info: dict) -> str:
+def generar_prompt_hype_soft(producto_info: dict,
+                             frases_usadas: list[str] | None = None) -> str:
     """Genera un prompt creativo y único para hype suave usando Claude."""
     client = get_anthropic_client()
     if not client:
@@ -356,14 +363,20 @@ def generar_prompt_hype_soft(producto_info: dict) -> str:
     categoria = producto_info.get("categoria", "")
     precio = producto_info.get("precio", "")
 
+    bloque_usadas = ""
+    if frases_usadas:
+        bloque_usadas = f"\nFRASES YA USADAS EN ESTA PUBLICACIÓN (NO las repitas bajo ningún concepto): {', '.join(frases_usadas)}\n"
+
     prompt = f"""\
-Generá un prompt para una IA de imágenes (Gemini) que va a recibir una foto de producto y tiene que agregarle un texto de venta elegante.
+Generá un prompt para una IA de imágenes (Gemini) que va a recibir una foto de producto y tiene que agregarle un BANNER DE VENTA ELEGANTE pero con presencia.
 
 REGLAS:
-1. Inventá una frase NUEVA de 3-5 palabras. PROHIBIDO: 'Elegancia Diaria', 'Calidad Premium', 'Orden Que Inspira', 'Tu Espacio Perfecto'. Tiene que ser algo FRESCO que nunca se usó.
-2. Elegí UN estilo tipográfico específico: 'tipografía art deco dorada con líneas finas' o 'letra manuscrita en tinta borgoña con flourish' o 'sans-serif ultra thin en blanco con sombra larga' o 'letras de revista de moda en rosa empolvado'
-3. Elegí UN color que NO sea azul ni gris: dorado rosa, verde salvia, terracota, coral, malva, champagne, menta, lavanda
-4. Elegí UNA ubicación diferente cada vez y un detalle decorativo sutil: 'en el borde inferior derecho con una línea dorada debajo' o 'centrado arriba con un marco rectangular fino' o 'en diagonal sutil desde la esquina inferior izquierda'
+1. Inventá una frase NUEVA de 3-5 palabras. PROHIBIDO: 'Elegancia Diaria', 'Calidad Premium', 'Orden Que Inspira', 'Tu Espacio Perfecto', 'Simple y Genial'.
+{bloque_usadas}\
+2. El texto NO debe ser letras sueltas flotando. Debe tener un SOPORTE VISUAL: una franja semi-transparente, un rectángulo con bordes redondeados, una etiqueta tipo price tag, un sello circular elegante, un marco fino con fondo difuminado. ALGO que le dé cuerpo al texto.
+3. Elegí UN estilo tipográfico específico y UN color que NO sea azul ni gris.
+4. Elegí UNA ubicación diferente cada vez con un detalle decorativo.
+5. El resultado debe verse como una publicación profesional de Instagram o una revista, no como texto pegado encima.
 
 Producto: {titulo}
 Categoría: {categoria}
