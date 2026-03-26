@@ -266,9 +266,11 @@ def add_hype_strong(foto_path: Path, producto_info: dict, dest_dir: Path,
     """
     from app.services.ia_generation import generar_prompt_hype_strong
 
+    frase = ""
     try:
-        prompt = generar_prompt_hype_strong(producto_info, frases_usadas)
+        frase, prompt = generar_prompt_hype_strong(producto_info, frases_usadas)
         prompt += "\n\nNO tapar el producto principal. Devolvé la imagen con los cambios."
+        logger.info("Frase hype strong: %s", frase)
         logger.info("Prompt hype strong generado por Claude: %s", prompt[:120])
     except Exception as e:
         logger.warning("Error generando prompt con Claude: %s — usando fallback", e)
@@ -279,7 +281,7 @@ def add_hype_strong(foto_path: Path, producto_info: dict, dest_dir: Path,
             f"NO tapar el producto principal. Devolvé la imagen con los cambios."
         )
 
-    return _apply_hype(foto_path, prompt, dest_dir, "strong"), prompt[:80]
+    return _apply_hype(foto_path, prompt, dest_dir, "strong"), frase
 
 
 def add_hype_soft(foto_path: Path, producto_info: dict, dest_dir: Path,
@@ -293,9 +295,11 @@ def add_hype_soft(foto_path: Path, producto_info: dict, dest_dir: Path,
     """
     from app.services.ia_generation import generar_prompt_hype_soft
 
+    frase = ""
     try:
-        prompt = generar_prompt_hype_soft(producto_info, frases_usadas)
+        frase, prompt = generar_prompt_hype_soft(producto_info, frases_usadas)
         prompt += "\n\nNO tapar el producto. Devolvé la imagen con el texto agregado."
+        logger.info("Frase hype soft: %s", frase)
         logger.info("Prompt hype soft generado por Claude: %s", prompt[:120])
     except Exception as e:
         logger.warning("Error generando prompt con Claude: %s — usando fallback", e)
@@ -306,7 +310,7 @@ def add_hype_soft(foto_path: Path, producto_info: dict, dest_dir: Path,
             f"NO tapar el producto. Devolvé la imagen con el texto agregado."
         )
 
-    return _apply_hype(foto_path, prompt, dest_dir, "soft"), prompt[:80]
+    return _apply_hype(foto_path, prompt, dest_dir, "soft"), frase
 
 
 def add_hype_batch(

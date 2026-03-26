@@ -311,9 +311,34 @@ Tu trabajo:
     return response.content[0].text.strip()
 
 
+def _parse_hype_response(response_text: str) -> tuple[str, str]:
+    """Extrae frase y prompt de la respuesta de Claude con formato FRASE:/PROMPT:.
+
+    Returns:
+        (frase, prompt_gemini). Si no encuentra el formato, fallback razonable.
+    """
+    text = response_text.strip()
+    upper = text.upper()
+    idx_frase = upper.find("FRASE:")
+    idx_prompt = upper.find("PROMPT:")
+
+    if idx_frase != -1 and idx_prompt != -1 and idx_prompt > idx_frase:
+        frase = text[idx_frase + len("FRASE:"):idx_prompt].strip().strip('"\'')
+        prompt = text[idx_prompt + len("PROMPT:"):].strip()
+        if frase and prompt:
+            return frase, prompt
+
+    # Fallback: no encontró el formato
+    return text[:50].strip(), text
+
+
 def generar_prompt_hype_strong(producto_info: dict,
-                               frases_usadas: list[str] | None = None) -> str:
-    """Genera un prompt creativo y único para hype fuerte usando Claude."""
+                               frases_usadas: list[str] | None = None) -> tuple[str, str]:
+    """Genera un prompt creativo y único para hype fuerte usando Claude.
+
+    Returns:
+        (frase elegida, prompt para Gemini).
+    """
     client = get_anthropic_client()
     if not client:
         raise RuntimeError("ANTHROPIC_API_KEY no configurada")
@@ -341,7 +366,9 @@ Producto: {titulo}
 Categoría: {categoria}
 Precio: ${precio}
 
-Respondé SOLO con el prompt para Gemini. Que sea largo y detallado (mínimo 100 palabras)."""
+FORMATO DE RESPUESTA:
+FRASE: [la frase exacta que elegiste]
+PROMPT: [el prompt completo para Gemini, largo y detallado, mínimo 100 palabras]"""
 
     response = client.messages.create(
         model=CLAUDE_MODEL,
@@ -349,12 +376,16 @@ Respondé SOLO con el prompt para Gemini. Que sea largo y detallado (mínimo 100
         temperature=1.0,
         messages=[{"role": "user", "content": prompt}],
     )
-    return response.content[0].text.strip()
+    return _parse_hype_response(response.content[0].text)
 
 
 def generar_prompt_hype_soft(producto_info: dict,
-                             frases_usadas: list[str] | None = None) -> str:
-    """Genera un prompt creativo y único para hype suave usando Claude."""
+                             frases_usadas: list[str] | None = None) -> tuple[str, str]:
+    """Genera un prompt creativo y único para hype suave usando Claude.
+
+    Returns:
+        (frase elegida, prompt para Gemini).
+    """
     client = get_anthropic_client()
     if not client:
         raise RuntimeError("ANTHROPIC_API_KEY no configurada")
@@ -382,7 +413,9 @@ Producto: {titulo}
 Categoría: {categoria}
 Precio: ${precio}
 
-Respondé SOLO con el prompt para Gemini."""
+FORMATO DE RESPUESTA:
+FRASE: [la frase exacta que elegiste]
+PROMPT: [el prompt completo para Gemini]"""
 
     response = client.messages.create(
         model=CLAUDE_MODEL,
@@ -390,7 +423,7 @@ Respondé SOLO con el prompt para Gemini."""
         temperature=1.0,
         messages=[{"role": "user", "content": prompt}],
     )
-    return response.content[0].text.strip()
+    return _parse_hype_response(response.content[0].text)
 
 
 def generar_prompts_gemini(sku: str, foto_path: Path) -> list[dict]:
