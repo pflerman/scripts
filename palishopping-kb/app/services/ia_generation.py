@@ -311,6 +311,90 @@ Tu trabajo:
     return response.content[0].text.strip()
 
 
+def generar_prompt_hype_strong(producto_info: dict) -> str:
+    """Genera un prompt creativo y único para hype fuerte usando Claude."""
+    client = get_anthropic_client()
+    if not client:
+        raise RuntimeError("ANTHROPIC_API_KEY no configurada")
+
+    titulo = producto_info.get("titulo", "Producto")
+    categoria = producto_info.get("categoria", "")
+    precio = producto_info.get("precio", "")
+
+    prompt = f"""\
+Generá UN prompt creativo para agregarle un banner de venta a una foto de producto de MercadoLibre Argentina.
+
+El prompt va a ser enviado a una IA de generación de imágenes (Gemini) que recibe la foto del producto y tiene que agregarle elementos gráficos de venta.
+
+IMPORTANTE: Sé ÚNICO y DIFERENTE cada vez. NUNCA repitas:
+- NO uses 'Elegancia Diaria', 'Calidad Premium', 'Oferta Imperdible' — esas frases ya están quemadas
+- NO uses siempre rojo y amarillo — variá: neón, holográfico, degradé púrpura-rosa, verde lima, dorado metálico, celeste eléctrico
+- NO uses siempre banners rectangulares — probá: stickers 3D, sellos de cera, cintas de regalo, explosiones de confetti, marcos polaroid, etiquetas colgantes, globos de texto comic
+
+Inventá una frase NUEVA de 3-6 palabras que sea:
+- Fresca, argentina, con actitud
+- Ejemplos de ESTILO (no copies estas, inventá nuevas): 'Dale Vida a Tu Placard', 'Tu Casa Te Lo Pide', 'Dejá de Buscar', 'Mirá Cómo Queda', 'Esto Es Lo Tuyo', 'Llegó Para Quedarse', 'No Lo Vas a Creer'
+
+El prompt debe especificar:
+- La frase exacta a usar
+- Un estilo visual ESPECÍFICO y diferente (no genérico)
+- Ubicación en la foto (variá: esquina, centro-abajo, diagonal, flotando, borde superior)
+- Colores específicos (elegí una paleta concreta, no 'colores vibrantes')
+- Un elemento gráfico concreto (no 'estrellas y badges' genérico)
+
+Producto: {titulo}
+Categoría: {categoria}
+Precio: ${precio}
+
+Respondé SOLO con el prompt para Gemini, nada más."""
+
+    response = client.messages.create(
+        model=CLAUDE_MODEL,
+        max_tokens=512,
+        messages=[{"role": "user", "content": prompt}],
+    )
+    return response.content[0].text.strip()
+
+
+def generar_prompt_hype_soft(producto_info: dict) -> str:
+    """Genera un prompt creativo y único para hype suave usando Claude."""
+    client = get_anthropic_client()
+    if not client:
+        raise RuntimeError("ANTHROPIC_API_KEY no configurada")
+
+    titulo = producto_info.get("titulo", "Producto")
+    categoria = producto_info.get("categoria", "")
+    precio = producto_info.get("precio", "")
+
+    prompt = f"""\
+Generá UN prompt creativo para agregarle un texto de venta SUTIL a una foto de producto de MercadoLibre Argentina.
+
+IMPORTANTE: Sé ÚNICO cada vez. NUNCA repitas 'Elegancia Diaria' ni 'Calidad Premium'.
+
+Inventá una frase NUEVA de 3-5 palabras que sea sofisticada y premium.
+- Ejemplos de ESTILO (no copies, inventá nuevas): 'Tu Momento Merece Esto', 'Simple y Genial', 'Hecho Para Vos', 'Lo Que Faltaba', 'Dale Ese Toque'
+
+El prompt debe especificar:
+- La frase exacta
+- Tipografía elegante (variá: serif clásica, script manuscrita, sans-serif fina, art deco)
+- Color específico de la paleta (variá: dorado rosa, verde salvia, azul medianoche, terracota, malva)
+- Ubicación precisa y diferente cada vez
+- Un detalle sutil: sombra, borde fino, subrayado, marco mínimo
+
+Producto: {titulo}
+Categoría: {categoria}
+Precio: ${precio}
+
+Respondé SOLO con el prompt para Gemini, nada más."""
+
+    response = client.messages.create(
+        model=CLAUDE_MODEL,
+        max_tokens=512,
+        messages=[{"role": "user", "content": prompt}],
+    )
+    return response.content[0].text.strip()
+
+
 def generar_prompts_gemini(sku: str, foto_path: Path) -> list[dict]:
     """Genera prompts Gemini desde una foto usando Claude Vision.
     Retorna lista de {id, ambiente, prompt}.

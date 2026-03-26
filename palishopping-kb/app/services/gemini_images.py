@@ -256,57 +256,47 @@ def _apply_hype(foto_path: Path, prompt: str, dest_dir: Path, prefix: str) -> Pa
 
 
 def add_hype_strong(foto_path: Path, producto_info: dict, dest_dir: Path) -> Path:
-    """Agrega banner de venta agresivo estilo ML a una foto."""
-    titulo = producto_info.get("titulo", "Producto")
-    categoria = producto_info.get("categoria", "")
-    precio = producto_info.get("precio", "")
+    """Agrega banner de venta agresivo estilo ML a una foto.
 
-    prompt = f"""\
-Tenés esta foto de un producto de MercadoLibre Argentina. Necesito que le agregues un BANNER DE VENTA llamativo y profesional, como los que usan los vendedores TOP de MercadoLibre.
+    Usa Claude para generar un prompt único y creativo, luego Gemini lo ejecuta.
+    """
+    from app.services.ia_generation import generar_prompt_hype_strong
 
-El banner debe incluir:
-- Una frase CORTA de impacto (3-6 palabras): 'ENVÍO GRATIS HOY', 'OFERTA IMPERDIBLE', 'LLEGÓ LO QUE BUSCABAS', 'TU HOGAR MERECE ESTO', etc.
-- Elementos gráficos llamativos: estrellas, destellos, flechas, iconos de envío, badges de descuento, sellos de garantía, cintas de oferta
-- Colores vibrantes que contrasten: rojo, amarillo, naranja para urgencia; dorado para premium; verde para envío gratis
-- Puede ser una franja diagonal, un sello circular, un banner en esquina, una cinta cruzada, un sticker estilo 'SALE'
-- Opcionalmente agregar un personaje o ilustración simple: una mano señalando, un pulgar arriba, un ícono de camión de envío, estrellas de rating
-- El estilo debe ser VENDEDOR AGRESIVO de marketplace, no elegante ni minimalista
-- NO tapar el producto principal, usar las esquinas, bordes o zonas libres de la foto
-
-Producto: {titulo}
-Categoría: {categoria}
-Precio: ${precio}
-
-IMPORTANTE: Que el banner se vea como publicidad REAL de MercadoLibre, no como un texto plano sobre la foto. Pensá en los banners que ves en las publicaciones más vendidas de ML.
-
-Devolvé la imagen con el banner agregado."""
+    try:
+        prompt = generar_prompt_hype_strong(producto_info)
+        prompt += "\n\nNO tapar el producto principal. Devolvé la imagen con los cambios."
+        logger.info("Prompt hype strong generado por Claude: %s", prompt[:120])
+    except Exception as e:
+        logger.warning("Error generando prompt con Claude: %s — usando fallback", e)
+        titulo = producto_info.get("titulo", "Producto")
+        prompt = (
+            f"Agregale un banner de venta llamativo estilo MercadoLibre a esta foto de {titulo}. "
+            f"Frase corta de impacto, colores vibrantes, estilo vendedor agresivo. "
+            f"NO tapar el producto principal. Devolvé la imagen con los cambios."
+        )
 
     return _apply_hype(foto_path, prompt, dest_dir, "strong")
 
 
 def add_hype_soft(foto_path: Path, producto_info: dict, dest_dir: Path) -> Path:
-    """Agrega texto de venta sutil y elegante a una foto."""
-    titulo = producto_info.get("titulo", "Producto")
-    categoria = producto_info.get("categoria", "")
-    precio = producto_info.get("precio", "")
+    """Agrega texto de venta sutil y elegante a una foto.
 
-    prompt = f"""\
-Tenés esta foto de un producto de MercadoLibre Argentina. Agregale un texto de venta sutil pero efectivo.
+    Usa Claude para generar un prompt único y creativo, luego Gemini lo ejecuta.
+    """
+    from app.services.ia_generation import generar_prompt_hype_soft
 
-El texto debe ser:
-- Una frase corta de 3-5 palabras
-- Con tipografía elegante y profesional
-- Colores variados y creativos (NO solo azul): probá dorado, verde, coral, borgoña, turquesa
-- Puede ser en una esquina, un borde inferior, o flotando con sombra suave
-- Estilo más sofisticado y premium, no gritón
-- Ejemplos: 'Diseño que Enamora', 'Calidad Premium', 'Tu Espacio Perfecto', 'Elegancia Diaria'
-- NO tapar el producto
-
-Producto: {titulo}
-Categoría: {categoria}
-Precio: ${precio}
-
-Devolvé la imagen con el texto agregado."""
+    try:
+        prompt = generar_prompt_hype_soft(producto_info)
+        prompt += "\n\nNO tapar el producto. Devolvé la imagen con el texto agregado."
+        logger.info("Prompt hype soft generado por Claude: %s", prompt[:120])
+    except Exception as e:
+        logger.warning("Error generando prompt con Claude: %s — usando fallback", e)
+        titulo = producto_info.get("titulo", "Producto")
+        prompt = (
+            f"Agregale un texto de venta sutil y elegante a esta foto de {titulo}. "
+            f"Frase corta sofisticada, tipografía elegante, estilo premium. "
+            f"NO tapar el producto. Devolvé la imagen con el texto agregado."
+        )
 
     return _apply_hype(foto_path, prompt, dest_dir, "soft")
 
