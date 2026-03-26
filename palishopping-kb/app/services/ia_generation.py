@@ -322,35 +322,25 @@ def generar_prompt_hype_strong(producto_info: dict) -> str:
     precio = producto_info.get("precio", "")
 
     prompt = f"""\
-Generá UN prompt creativo para agregarle un banner de venta a una foto de producto de MercadoLibre Argentina.
+Generá un prompt para una IA de imágenes (Gemini) que va a recibir una foto de producto y tiene que agregarle elementos gráficos de venta AGRESIVOS.
 
-El prompt va a ser enviado a una IA de generación de imágenes (Gemini) que recibe la foto del producto y tiene que agregarle elementos gráficos de venta.
-
-IMPORTANTE: Sé ÚNICO y DIFERENTE cada vez. NUNCA repitas:
-- NO uses 'Elegancia Diaria', 'Calidad Premium', 'Oferta Imperdible' — esas frases ya están quemadas
-- NO uses siempre rojo y amarillo — variá: neón, holográfico, degradé púrpura-rosa, verde lima, dorado metálico, celeste eléctrico
-- NO uses siempre banners rectangulares — probá: stickers 3D, sellos de cera, cintas de regalo, explosiones de confetti, marcos polaroid, etiquetas colgantes, globos de texto comic
-
-Inventá una frase NUEVA de 3-6 palabras que sea:
-- Fresca, argentina, con actitud
-- Ejemplos de ESTILO (no copies estas, inventá nuevas): 'Dale Vida a Tu Placard', 'Tu Casa Te Lo Pide', 'Dejá de Buscar', 'Mirá Cómo Queda', 'Esto Es Lo Tuyo', 'Llegó Para Quedarse', 'No Lo Vas a Creer'
-
-El prompt debe especificar:
-- La frase exacta a usar
-- Un estilo visual ESPECÍFICO y diferente (no genérico)
-- Ubicación en la foto (variá: esquina, centro-abajo, diagonal, flotando, borde superior)
-- Colores específicos (elegí una paleta concreta, no 'colores vibrantes')
-- Un elemento gráfico concreto (no 'estrellas y badges' genérico)
+REGLAS PARA EL PROMPT QUE GENERES:
+1. Inventá una frase NUEVA y ÚNICA de 3-6 palabras en español argentino. PROHIBIDO usar: 'Elegancia Diaria', 'Calidad Premium', 'Oferta Imperdible', 'Orden Que Inspira', 'Tu Clóset Te Agradece'. Inventá algo que NUNCA se haya usado.
+2. Describí EXACTAMENTE qué elementos gráficos agregar. NO digas 'agregá un banner'. Sé ESPECÍFICO: 'Agregá un sticker circular 3D color verde neón en la esquina superior derecha con la frase X en tipografía bold blanca con sombra negra' o 'Agregá una cinta diagonal roja desde la esquina superior izquierda hasta el centro con texto dorado metálico que diga X' o 'Agregá un globo de texto estilo cómic en amarillo eléctrico con borde negro grueso en la parte inferior que diga X'
+3. Especificá colores EXACTOS, no 'colores vibrantes'. Elegí UNA paleta concreta: verde neón + negro, fucsia + dorado, celeste eléctrico + blanco, naranja fluo + violeta, etc.
+4. Especificá ubicación EXACTA: 'esquina superior derecha', 'franja diagonal de esquina a esquina', 'banner inferior ocupando el 20% de la imagen', etc.
+5. El elemento debe ser GRANDE y VISIBLE, no un textito chiquito en una esquina.
 
 Producto: {titulo}
 Categoría: {categoria}
 Precio: ${precio}
 
-Respondé SOLO con el prompt para Gemini, nada más."""
+Respondé SOLO con el prompt para Gemini. Que sea largo y detallado (mínimo 100 palabras)."""
 
     response = client.messages.create(
         model=CLAUDE_MODEL,
         max_tokens=512,
+        temperature=1.0,
         messages=[{"role": "user", "content": prompt}],
     )
     return response.content[0].text.strip()
@@ -367,29 +357,24 @@ def generar_prompt_hype_soft(producto_info: dict) -> str:
     precio = producto_info.get("precio", "")
 
     prompt = f"""\
-Generá UN prompt creativo para agregarle un texto de venta SUTIL a una foto de producto de MercadoLibre Argentina.
+Generá un prompt para una IA de imágenes (Gemini) que va a recibir una foto de producto y tiene que agregarle un texto de venta elegante.
 
-IMPORTANTE: Sé ÚNICO cada vez. NUNCA repitas 'Elegancia Diaria' ni 'Calidad Premium'.
-
-Inventá una frase NUEVA de 3-5 palabras que sea sofisticada y premium.
-- Ejemplos de ESTILO (no copies, inventá nuevas): 'Tu Momento Merece Esto', 'Simple y Genial', 'Hecho Para Vos', 'Lo Que Faltaba', 'Dale Ese Toque'
-
-El prompt debe especificar:
-- La frase exacta
-- Tipografía elegante (variá: serif clásica, script manuscrita, sans-serif fina, art deco)
-- Color específico de la paleta (variá: dorado rosa, verde salvia, azul medianoche, terracota, malva)
-- Ubicación precisa y diferente cada vez
-- Un detalle sutil: sombra, borde fino, subrayado, marco mínimo
+REGLAS:
+1. Inventá una frase NUEVA de 3-5 palabras. PROHIBIDO: 'Elegancia Diaria', 'Calidad Premium', 'Orden Que Inspira', 'Tu Espacio Perfecto'. Tiene que ser algo FRESCO que nunca se usó.
+2. Elegí UN estilo tipográfico específico: 'tipografía art deco dorada con líneas finas' o 'letra manuscrita en tinta borgoña con flourish' o 'sans-serif ultra thin en blanco con sombra larga' o 'letras de revista de moda en rosa empolvado'
+3. Elegí UN color que NO sea azul ni gris: dorado rosa, verde salvia, terracota, coral, malva, champagne, menta, lavanda
+4. Elegí UNA ubicación diferente cada vez y un detalle decorativo sutil: 'en el borde inferior derecho con una línea dorada debajo' o 'centrado arriba con un marco rectangular fino' o 'en diagonal sutil desde la esquina inferior izquierda'
 
 Producto: {titulo}
 Categoría: {categoria}
 Precio: ${precio}
 
-Respondé SOLO con el prompt para Gemini, nada más."""
+Respondé SOLO con el prompt para Gemini."""
 
     response = client.messages.create(
         model=CLAUDE_MODEL,
         max_tokens=512,
+        temperature=1.0,
         messages=[{"role": "user", "content": prompt}],
     )
     return response.content[0].text.strip()
