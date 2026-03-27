@@ -7,12 +7,32 @@ import base64
 import json
 import logging
 import os
+import time
 from datetime import datetime
 from pathlib import Path
 
 from app.config import CLAUDE_MODEL
 
 logger = logging.getLogger(__name__)
+
+
+def _call_claude_with_retry(client, **kwargs):
+    """Llama a client.messages.create con retry automático para error 529 (overloaded)."""
+    max_intentos = 3
+    for intento in range(1, max_intentos + 1):
+        try:
+            return client.messages.create(**kwargs)
+        except Exception as e:
+            status = getattr(e, "status_code", None) or getattr(e, "status", None)
+            is_overloaded = (status == 529
+                             or "overloaded" in str(e).lower()
+                             or "529" in str(e))
+            if is_overloaded and intento < max_intentos:
+                logger.warning("Claude overloaded, reintentando en 3s... (intento %d/%d)",
+                               intento, max_intentos)
+                time.sleep(3)
+                continue
+            raise
 
 
 def get_anthropic_client():
@@ -97,7 +117,7 @@ Contexto:
 
 {reglas}"""
 
-        response = client.messages.create(
+        response = _call_claude_with_retry(client,
             model=CLAUDE_MODEL,
             max_tokens=256,
             messages=[{
@@ -138,7 +158,7 @@ NO copies ni parafrasees el título original. Reinventalo completamente.
 
 {reglas}"""
 
-        response = client.messages.create(
+        response = _call_claude_with_retry(client,
             model=CLAUDE_MODEL,
             max_tokens=256,
             messages=[{"role": "user", "content": prompt_texto}],
@@ -158,7 +178,7 @@ NO copies ni parafrasees el título original. Reinventalo completamente.
     _descriptive = ("," in titulo or len(titulo) > 60)
     if _descriptive:
         logger.info("Título parece descriptivo (%d chars), pidiendo resumen...", len(titulo))
-        retry = client.messages.create(
+        retry = _call_claude_with_retry(client,
             model=CLAUDE_MODEL,
             max_tokens=128,
             messages=[{"role": "user", "content": (
@@ -260,7 +280,7 @@ Contexto:
 
 {criterios}"""
 
-        response = client.messages.create(
+        response = _call_claude_with_retry(client,
             model=CLAUDE_MODEL,
             max_tokens=1024,
             messages=[{
@@ -302,7 +322,7 @@ Tu trabajo:
 
 {criterios}"""
 
-        response = client.messages.create(
+        response = _call_claude_with_retry(client,
             model=CLAUDE_MODEL,
             max_tokens=1024,
             messages=[{"role": "user", "content": prompt_texto}],
@@ -371,7 +391,7 @@ FORMATO DE RESPUESTA:
 FRASE: [la frase exacta que elegiste]
 PROMPT: [el prompt completo para Gemini, largo y detallado, mínimo 100 palabras]"""
 
-    response = client.messages.create(
+    response = _call_claude_with_retry(client,
         model=CLAUDE_MODEL,
         max_tokens=512,
         temperature=1.0,
@@ -419,7 +439,7 @@ FORMATO DE RESPUESTA:
 FRASE: [la frase exacta que elegiste]
 PROMPT: [el prompt completo para Gemini]"""
 
-    response = client.messages.create(
+    response = _call_claude_with_retry(client,
         model=CLAUDE_MODEL,
         max_tokens=512,
         temperature=1.0,
@@ -454,7 +474,7 @@ Variá los ambientes: placard, habitación, entrada de casa, living, fondo de es
 Respondé SOLO con JSON válido, sin texto extra, sin markdown, sin backticks:
 {"prompts": [{"id": 1, "ambiente": "...", "prompt": "..."}, ...]}"""
 
-    response = client.messages.create(
+    response = _call_claude_with_retry(client,
         model=CLAUDE_MODEL,
         max_tokens=2048,
         system=system_prompt,
