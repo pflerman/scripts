@@ -18,19 +18,22 @@ logger = logging.getLogger(__name__)
 
 def _call_claude_with_retry(client, **kwargs):
     """Llama a client.messages.create con retry automático para error 529 (overloaded)."""
+    import anthropic
     max_intentos = 3
     for intento in range(1, max_intentos + 1):
         try:
             return client.messages.create(**kwargs)
+        except (anthropic.APIStatusError, anthropic.APIConnectionError, anthropic.RateLimitError) as e:
+            status = getattr(e, "status_code", 0)
+            if (status == 529 or "overloaded" in str(e).lower()) and intento < max_intentos:
+                logger.warning("Claude overloaded, reintentando en 5s... (intento %d/%d)", intento, max_intentos)
+                time.sleep(5)
+                continue
+            raise
         except Exception as e:
-            status = getattr(e, "status_code", None) or getattr(e, "status", None)
-            is_overloaded = (status == 529
-                             or "overloaded" in str(e).lower()
-                             or "529" in str(e))
-            if is_overloaded and intento < max_intentos:
-                logger.warning("Claude overloaded, reintentando en 3s... (intento %d/%d)",
-                               intento, max_intentos)
-                time.sleep(3)
+            if ("529" in str(e) or "overloaded" in str(e).lower()) and intento < max_intentos:
+                logger.warning("Claude overloaded (catch genérico), reintentando en 5s... (intento %d/%d)", intento, max_intentos)
+                time.sleep(5)
                 continue
             raise
 
